@@ -1,0 +1,79 @@
+{
+    "proto": {
+        "peer_data_s": [
+
+        ],
+        "command_s": [
+
+        ],
+        "ipc_memory_s": [
+            
+        ]
+    },
+    "user": {
+        "server": [
+            {
+                "size": 4,
+                "name": "magic_number"
+            }
+        ],
+        "client": [
+            {
+        		"size": 32,
+        		"name": "name"
+        	},
+        	{
+        		"size": 22,
+        		"name": "server"
+        	},
+        	{
+        		"size": 4,
+        		"name": "friendid"
+        	},
+        	{
+        		"size": 1,
+        		"name": "connected"
+        	},
+        	{
+        		"size": 1,
+        		"name": "good"
+        	},
+        	{
+        		"size": 4,
+        		"name": "health"
+        	},
+        	{
+        		"size": 4,
+        		"name": "health_max"
+        	},
+        	{
+        		"size": 1,
+        		"name": "life_state"
+        	},
+        	{
+        		"size": 4,
+        		"name": "team"
+        	},
+        	{
+        		"size": 4,
+        		"name": "class"
+        	},
+        	{
+        		"size": 4,
+        		"name": "score"
+        	},
+        	{
+        		"size": 4,
+        		"name": "last_score"
+        	},
+        	{
+        		"size": 4,
+        		"name": "total_score"
+        	},
+        	{
+        		"size": 4,
+        		"name": "heartbeat"
+        	}
+        ]
+    }
+}
