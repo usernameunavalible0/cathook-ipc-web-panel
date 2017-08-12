@@ -1,77 +1,159 @@
 {
+    "const": {
+        "max_peers": 32,
+        "command_buffer": 64,
+        "pool_size": 262144,
+        "command_data": 64
+    },
     "proto": {
         "peer_data_s": [
-
+            {
+                "type": "bool",
+                "name": "free"
+            },
+            {
+                "type": "pid_t",
+                "name": "pid"
+            },
+            {
+                "type": "unsigned long",
+                "name": "starttime"
+            }
         ],
         "command_s": [
-
+            {
+                "type": "unsigned",
+                "name": "command_number"
+            },
+            {
+                "type": "unsigned",
+                "name": "peer_mask"
+            },
+            {
+                "type": "unsigned",
+                "name": "sender"
+            },
+            {
+                "type": "unsigned long",
+                "name": "payload_offset"
+            },
+            {
+                "type": "unsigned",
+                "name": "payload_size"
+            },
+            {
+                "type": "unsigned",
+                "name": "cmd_type"
+            },
+            {
+                "type": "char[]",
+                "size": "#command_data",
+                "name": "cmd_data"
+            }
         ],
         "ipc_memory_s": [
-            
+            {
+                "type": "pthread_mutex_t",
+                "name": "mutex"
+            },
+            {
+                "type": "unsigned",
+                "name": "peer_count"
+            },
+            {
+                "type": "unsigned long",
+                "name": "command_count"
+            },
+            {
+                "type": "peer_data_s[]",
+                "size": "#max_peers",
+                "name": "peer_data"
+            },
+            {
+                "type": "command_s[]",
+                "size": "#command_buffer",
+                "name": "commands"
+            },
+            {
+                "type": "char[]",
+                "size": "#pool_size",
+                "name": "pool"
+            },
+            {
+                "type": "user.server",
+                "name": "global_data"
+            },
+            {
+                "type": "user.client[]",
+                "size": "#max_peers",
+                "name": "peer_user_data"
+            }
         ]
     },
     "user": {
         "server": [
             {
-                "size": 4,
+                "type": "unsigned",
                 "name": "magic_number"
             }
         ],
         "client": [
             {
-        		"size": 32,
+        		"type": "char[]",
+                "size": 32,
         		"name": "name"
         	},
         	{
-        		"size": 22,
+        		"type": "char[]",
+                "size": 22,
         		"name": "server"
         	},
         	{
-        		"size": 4,
+        		"type": "unsigned",
         		"name": "friendid"
         	},
         	{
-        		"size": 1,
+        		"type": "bool",
         		"name": "connected"
         	},
         	{
-        		"size": 1,
+        		"type": "bool",
         		"name": "good"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "health"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "health_max"
         	},
         	{
-        		"size": 1,
+        		"type": "char",
         		"name": "life_state"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "team"
         	},
         	{
-        		"size": 4,
-        		"name": "class"
+        		"type": "int",
+        		"name": "clazz"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "score"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "last_score"
         	},
         	{
-        		"size": 4,
+        		"type": "int",
         		"name": "total_score"
         	},
         	{
-        		"size": 4,
+        		"type": "time_t",
         		"name": "heartbeat"
         	}
         ]
