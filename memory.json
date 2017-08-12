@@ -5,6 +5,16 @@
         "pool_size": 262144,
         "command_data": 64
     },
+    "sizeof": {
+        "bool": 1,
+        "char": 1,
+        "int": 4,
+        "pid_t": 4,
+        "time_t": 4,
+        "unsigned": 4,
+        "unsigned long": 4,
+        "pthread_mutex_t": 24
+    },
     "proto": {
         "peer_data_s": [
             {
@@ -47,7 +57,7 @@
             },
             {
                 "type": "char[]",
-                "size": "#command_data",
+                "size": "command_data",
                 "name": "cmd_data"
             }
         ],
@@ -65,18 +75,18 @@
                 "name": "command_count"
             },
             {
-                "type": "peer_data_s[]",
-                "size": "#max_peers",
+                "type": "proto.peer_data_s[]",
+                "size": "max_peers",
                 "name": "peer_data"
             },
             {
-                "type": "command_s[]",
-                "size": "#command_buffer",
+                "type": "proto.command_s[]",
+                "size": "command_buffer",
                 "name": "commands"
             },
             {
                 "type": "char[]",
-                "size": "#pool_size",
+                "size": "pool_size",
                 "name": "pool"
             },
             {
@@ -85,7 +95,7 @@
             },
             {
                 "type": "user.client[]",
-                "size": "#max_peers",
+                "size": "max_peers",
                 "name": "peer_user_data"
             }
         ]
