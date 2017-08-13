@@ -10957,6 +10957,11 @@ function addClientRow(id) {
     return row;
 }
 
+function runCommand() {
+	cmd('exec_all', { cmd: $('#console').val() });
+	$('#console').val('');
+}
+
 $(function() {
 	for (var i = 0; i < 32; i++) {
 		addClientRow(i);
@@ -10964,6 +10969,13 @@ $(function() {
 	updateData();
     status.info('init done');
 	setInterval(updateData, 1000 * 2);
+	$('#console').on('keypress', function(e) {
+		if (e.keyCode == '13') {
+			runCommand();
+			e.preventDefault();
+		}
+	});
+	$('#console-send').on('click', runCommand);
 });
 
 },{"browser-request":2,"format-duration":3,"jquery":4}]},{},[6]);
