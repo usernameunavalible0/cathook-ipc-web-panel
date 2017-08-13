@@ -1,0 +1,26 @@
+{
+  "name": "cathook-ipc-server-web-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nullifiedcat/cathook-ipc-web-panel.git"
+  },
+  "author": "nullifiedcat",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nullifiedcat/cathook-ipc-web-panel/issues"
+  },
+  "homepage": "https://github.com/nullifiedcat/cathook-ipc-web-panel#readme",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "browser-request": "^0.3.3",
+    "express": "^4.15.4",
+    "extend": "^3.0.1",
+    "jquery": "^3.2.1"
+  }
+}

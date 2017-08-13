@@ -1,13 +1,15 @@
-var m = require('./memory.json');
-var MemoryMapping = require('./shmap');
-var util = require('util');
+const CathookConsole = require('./cathook');
+const express = require("express");
+const bodyparser = require("body-parser");
 
-var mm = new MemoryMapping(m);
+const app = express();
+app.use(express.static(path.join(__dirname, "public")));
+app.use(bodyparser.json());
+app.use(bodyparser.urlencoded({ extended: true }));
 
-for (var s in mm.structs) {
-    var o = mm.structs[s];
-    console.log('\nstruct', s, ':', o.sizeof);
-    for (var f in o.fields) {
-        console.log(`\t+${o.fields[f].offset}\t(${o.fields[f].size})\t${f}`)
-    }
-}
+const cc = new CathookConsole();
+
+cc.once('init', () => {
+    cc.command('connect');
+});
+cc.on('exit', () => {});
