@@ -2,9 +2,10 @@
     <head>
         <title>CHIPC control panel</title>
         <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="vgui.css">
         <script src="bundle.js"></script>
     </head>
-    <body>
+    <body class="vgui-container vgui-font">
         <h1>Cathook IPC Control Panel</h1>
         <div id="console-container">
             <span><input type="text" id="console" placeholder="command for every client" size=64 class="vgui-border-inset"></span>
@@ -15,11 +16,14 @@
             <span>Status: </span><span id="status-text">initializing</span>
         </div>
         <br>
-        <div class="vgui-border-inset" id="table-container">
-            <table id="clients">
+        <div id="table-container">
+            <table id="clients" class="vgui-table vgui-inset">
                 <tr>
+                    <td>Bot Name</td>
+                    <td>User</td>
+                    <td>State</td>
                     <td>ID</td>
-                    <td>Status</td>
+                    <td>IPC Status</td>
                     <td>PID</td>
                     <td>Name</td>
                     <td>Total Score</td>
@@ -36,7 +40,7 @@
         <div id="footer">
             <hr>
             <span class="nohighlight">
-                nullifiedcat, 2017 | <a href="https://github.com/nullifiedcat">github</a>
+                nullifiedcat, 2017 | <a href="https://github.com/nullifiedcat" target="_blank">github</a>
             </span>
         </div>
     </body>

@@ -10926,29 +10926,27 @@ function updateClientRow(id, data) {
         row.find('.client-health').text(data.health + '/' + data.health_max);
     } else {
 		row.toggleClass('disconnected', true);
-        row.find('.client-ip').text('N/A');
-        row.find('.client-alive').text('N/A');
-        row.find('.client-team').text('N/A');
-        row.find('.client-class').text('N/A');
-        row.find('.client-score').text('N/A');
-        row.find('.client-health').text('N/A');
+        row.find('.connected').text('N/A');
     }
 }
 
-function addClientRow(id) {
+function addClientRow(id, botid, username) {
     var row = $('<tr></tr>').attr('data-id', id).addClass('disconnected hidden');
-    row.append($('<td></td>').attr('class', 'client-id').text(id));
-    row.append($('<td></td>').attr('class', 'client-status').text('N/A'));
+	row.append($('<td></td>').attr('class', 'client-bot-name').text(botid));
+	row.append($('<td></td>').attr('class', 'client-user').text(username));
+	row.append($('<td></td>').attr('class', 'client-state').text("UNDEFINED"));
+	row.append($('<td></td>').attr('class', 'client-id active').text(id));
+    row.append($('<td></td>').attr('class', 'client-status active').text('N/A'));
     //row.append($('<td></td>').attr('class', 'client-uptime').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-pid').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-name').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-total').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-ip connected').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-alive connected').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-team connected').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-class connected').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-score connected').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-health connected').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-pid active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-name active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-total active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-ip connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-alive connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-team connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-class connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-score connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-health connected active').text('N/A'));
     var actions = $('<td></td>').attr('class', 'client-actions');
     actions.append($('<input>').attr('type', 'button').attr('value', 'Command').on('click', commandButtonCallback));
     actions.append($('<input>').attr('type', 'button').attr('value', 'Stop').on('click', stopButtonCallback));
