@@ -22,13 +22,22 @@ input:not([type=button]), .vgui-inset {
     color: #d8dfd3;
 }
 
-input[type=button], .vgui-outset {
+input[type=button]:not(:active), .vgui-outset {
     border-top: 1px solid #899180;
     border-left: 1px solid #899180;
     border-bottom: 1px solid #282f22;
     border-right: 1px solid #282f22;
     color: #d8dfd3;
     background: #4d5844;
+}
+
+input[type=button]:active {
+    border-bottom: 1px solid #899180;
+    border-right: 1px solid #899180;
+    border-top: 1px solid #282f22;
+    border-left: 1px solid #282f22;
+    background: #3f4737;
+    color: #d8dfd3;
 }
 
 .vgui-container {

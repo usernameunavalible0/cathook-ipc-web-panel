@@ -28,6 +28,10 @@ body {
     color: #a1aa95;
 }
 
+#clients tr:not(:first-child) td:last-child {
+    padding: 0;
+}
+
 a {
     color: white;
     text-decoration: none;
@@ -53,5 +57,9 @@ a:visited {
 }
 
 .disconnected .connected {
+    color: #a1aa95;
+}
+
+.stopped .active {
     color: #a1aa95;
 }

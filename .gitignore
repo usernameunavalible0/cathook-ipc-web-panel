@@ -1,2 +1,4 @@
 node_modules/
 public/bundle*
+forever/node_modules*
+inject.log
