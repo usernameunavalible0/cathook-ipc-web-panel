@@ -22,6 +22,9 @@
     "express": "^4.15.4",
     "extend": "^3.0.1",
     "format-duration": "^1.0.0",
-    "jquery": "^3.2.1"
+    "jquery": "^3.2.1",
+    "request": "^2.81.0",
+    "sudo": "^1.0.3",
+    "time-stamp": "^2.0.0"
   }
 }
