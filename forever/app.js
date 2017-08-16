@@ -17,6 +17,11 @@ procevt.on('init', () => {
 
 module.exports = function(app) {
 
+	if (process.getuid() != 0) {
+		console.log('[FATAL] Bot manager needs superuser privileges, please restart as root');
+		process.exit(1);
+	}
+
 	app.get('/list', function(req, res) {
 		var result = {};
 		result.quota = manager.quota;
