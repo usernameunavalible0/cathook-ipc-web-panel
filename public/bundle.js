@@ -10855,7 +10855,7 @@ function updateData() {
 	cmd('query', {}, function(error, data) {
 		if (error) return;
 		for (var i in data.result) {
-			updateIPCData(data.result[i]);
+			updateIPCData(i, data.result[i]);
 		}
 	});
 	request('state', function(error, r, b) {
@@ -10874,7 +10874,7 @@ function commandButtonCallback() {
     var cmdz = prompt('Enter a command');
     if (cmdz) {
 		cmd('exec', {
-			target: parseInt($(this).parent().parent().attr('data-id')),
+			target: parseInt($(this).parent().parent().find('.client-id').text()),
 			cmd: cmdz
 		}, null)
     }
@@ -10919,19 +10919,36 @@ function cmd(command, data, callback) {
 	});
 }
 
-function updateIPCData(data) {
+var autorestart = {};
+
+function updateIPCData(id, data) {
 	var row = $(`tr[data-pid="${data.pid}"]`);
 	if (!row.length) return;
-	var time = Date.now() / 1000 - data.heartbeat;
+	var time = Math.floor(Date.now() / 1000 - data.heartbeat);
 	if (time < 2) {
-		row.find('.client-status').removeClass('error warning').text('OK');
+		row.find('.client-status').removeClass('error warning').text('OK ' + time);
 	} else if (time < 30) {
-		row.find('.client-status').removeClass('error').addClass('warning').text('Warning');
+		row.find('.client-status').removeClass('error').addClass('warning').text('Warning ' + time);
 	} else {
-		row.find('.client-status').removeClass('warning').addClass('error').text('Likely dead');
+		if ($('#autorestart-bots').prop('checked')) {
+			if (data.heartbeat && !autorestart[row.attr('data-id')] || (Date.now() - autorestart[row.attr('data-id')]) > 1000 * 5) {
+				autorestart[row.attr('data-id')] = Date.now();
+				console.log('auto-restarting' ,row.attr('data-id'));
+			    request(`bot/${row.attr('data-id')}/restart`, function(e, r, b) {
+					if (e) {
+						console.log(e,b);
+						status.error('Error restarting bot');
+					} else {
+						status.info('Bot restarted');
+					}
+				});
+			}
+		}
+		row.find('.client-status').removeClass('warning').addClass('error').text('Likely dead ' + time);
 	}
 	//row.find('.client-uptime').text(format(time - data.starttime));
 	row.find('.client-pid').text(data.pid);
+	row.find('.client-id').text(id);
 	row.find('.client-name').text(data.name);
 	row.find('.client-total').text(data.total_score);
 	if (data.connected) {
@@ -10951,11 +10968,14 @@ function updateIPCData(data) {
 function updateUserData(bot, data) {
 	var row = $(`tr[data-id="${bot}"]`);
 	if (!row.length) return;
-	row.toggleClass('stopped', !data.pid);
+	row.toggleClass('stopped', data.state != 6);
 	row.find('.client-state').text(STATE[data.state]);
-	if (data.pid) {
+	if (data.state == 6 && data.pid) {
 		row.attr('data-pid', data.pid.pid);
 		row.find('.client-pid').text(data.pid.pid);
+	}
+	if (data.state != 6) {
+		row.find('.active').text('N/A');
 	}
 }
 

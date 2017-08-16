@@ -171,3 +171,11 @@ hr {
     border-top: 1px solid #282f22;
     border-bottom: 1px solid #899180;
 }
+
+.nopad {
+    padding: 0;
+}
+
+.vmiddle * {
+    vertical-align: middle;
+}

@@ -13,13 +13,13 @@ rm -rf /tmp/dumps # Remove if it exists
 mkdir /tmp/dumps # Make it as root
 chmod 000 /tmp/dumps # No permissions
 
-FILENAME="/opt/cathook/bin/libcathook.so"
+FILENAME="/opt/cathook/bin/libcathook-textmode.so"
 
 echo loading "$FILENAME" to "$proc"
 
 echo "$EUID:$USER:$HOME:$proc:$FILENAME" >> inject.log
 
-if grep "libcathook.so" "/proc/$proc/maps"; then
+if grep "cathook" "/proc/$proc/maps"; then
 	echo "Already injected"
 	echo "Already injected!" >> inject.log
 	exit
