@@ -3,3 +3,4 @@ public/bundle*
 forever/node_modules*
 inject.log
 core
+logs/
