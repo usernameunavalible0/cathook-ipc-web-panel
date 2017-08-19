@@ -1,18 +1,36 @@
 const procevt = require('./procevt');
 const passwd = require('./passwd');
+const fs = require('fs');
 const Bot = require('./bot');
 
 const users = new passwd.Passwd();
 const USERNAMES = 'catbot-';
 
 class BotManager {
-    constructor() {
+    constructor(cc) {
         var self = this;
+        fs.mkdirSync('logs');
         this.bots = [];
+        this.cc = cc;
         this.quota = 0;
-        procevt.once('update', function() {
-            procevt.on('birth', self.onProcBirth.bind(self));
-            procevt.on('death', self.onProcDeath.bind(self));
+        this.lastQuery = {};
+        this.updateTimeout = setTimeout(this.update.bind(this), 1000);
+    }
+    update() {
+        var self = this;
+        self.cc.command('query', {}, function(data) {
+            self.updateTimeout = setTimeout(self.update.bind(self), 1000);
+            self.lastQuery = data;
+            for (var q in data.result) {
+                for (var b of self.bots) {
+                    if (b.procGame && b.procGame.pid == data.result[q].pid) {
+                        b.emit('ipc-data', {
+                            id: q,
+                            data: data.result[q]
+                        })
+                    }
+                }
+            }
         });
     }
     freeUser() {
@@ -25,24 +43,6 @@ class BotManager {
             if (users.users[uid].name.indexOf(USERNAMES) >= 0 && !nonfree[uid]) return users.users[uid];
         }
         return null;
-    }
-    onProcBirth(proc) {
-        if (proc.name == 'hl2_linux') {
-            for (var bot of this.bots) {
-                if (proc.uid == bot.user.uid) {
-                    bot.onGameBirth(proc);
-                }
-            }
-        }
-    }
-    onProcDeath(proc) {
-        if (proc.name == 'hl2_linux') {
-            for (var bot of this.bots) {
-                if (proc.uid == bot.user.uid) {
-                    bot.onGameDeath(proc);
-                }
-            }
-        }
     }
     enforceQuota() {
         var quota = this.quota;

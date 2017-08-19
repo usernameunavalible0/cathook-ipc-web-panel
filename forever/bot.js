@@ -3,15 +3,27 @@ const child_process = require('child_process');
 
 const sudo = require('sudo');
 const timestamp = require('time-stamp');
+const _ = require('underscore');
+const fs = require('fs');
 
 const procevt = require('./procevt');
 const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
-const injectManager = require('./injection')
+const injectManager = require('./injection');
 
-const LAUNCH_OPTIONS = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 640 -w 480 -textmode -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
+const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD";
+const LAUNCH_OPTIONS_GAME = "start.sh -game tf -textmode -steam -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
+const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
-const startQueue = new ExecQueue(5000);
+const TIMEOUT_START_GAME = 10000;
+const TIMEOUT_INJECT_LIBRARY = 25000;
+const TIMEOUT_RETRY_ACCOUNT = 30000;
+const TIMEOUT_IPC_STATE = 10000;
+const TIMEOUT_RESTART = 10000;
+
+const steamStartQueue = new ExecQueue(5000);
+const gameStartQueue = new ExecQueue(5000);
+const injectQueue = new ExecQueue(5000);
 
 const STATE = {
     INITIALIZING: 0,
@@ -21,7 +33,10 @@ const STATE = {
     WAITING_INJECT: 4,
     INJECTING: 5,
     RUNNING: 6,
-    RESTARTING: 7
+    RESTARTING: 7,
+    STOPPING: 8,
+    WAITING_ACCOUNT: 9,
+    INJECTED: 10
 }
 
 class Bot extends EventEmitter {
@@ -32,17 +47,41 @@ class Bot extends EventEmitter {
 
         this.name = name;
         this.user = user;
+        this.stopped = false;
+        this.account = null;
 
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
+        this.procSteam  = null;
+        this.procGame   = null;
+        this.procInject = null;
 
-        this.steam = null;
-        this.game  = null;
+        this.ipcState = null;
+        this.ipcID = -1;
 
         this.gameStarted = 0;
 
-        this.handleGameTimeout = 0;
-        this.handleInjection = 0;
+        this.timeoutGameStart = 0;
+        this.timeoutIPCState = 0;
+        this.timeoutInjection = 0;
+        this.timeoutSteamRestart = 0;
+
+        this.logSteam = null;
+        this.logGame = null;
+
+        var steampath = this.user.home + '/.local/share/Steam';
+
+        // :/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu/mesa-egl:/usr/lib/i386-linux-gnu/mesa:/usr/local/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/mesa-egl:/usr/lib/x86_64-linux-gnu/mesa:/lib32:/usr/lib32:/libx32:/usr/libx32:/lib:/usr/lib:/usr/lib/i386-linux-gnu/sse2:/usr/lib/i386-linux-gnu/tls:/usr/lib/x86_64-linux-gnu/tls
+        this.spawnOptions = {
+            uid: parseInt(self.user.uid),
+            gid: parseInt(self.user.gid),
+            cwd: GAME_CWD,
+            env: {
+                USER: self.user.name,
+                DISPLAY: ":0",
+                HOME: this.user.home
+            }
+        }
 
         this.on('inject', function() {
             self.state = STATE.RUNNING;
@@ -51,130 +90,170 @@ class Bot extends EventEmitter {
             self.state = STATE.RESTARTING;
             self.restartGame();
         });
-
-        this.killSteam(function() {
-            self.killGame(function() {
-                self.state = STATE.INITIALIZED;
-            });
+        this.on('ipc-data', function(obj) {
+            var id = obj.id;
+            var data = obj.data;
+            self.ipcID = id;
+            if (!self.ipcState) {
+                self.log(`Assigned IPC ID ${id}`);
+            }
+            self.ipcState = data;
+            self.state = STATE.RUNNING;
         });
+
+        this.kill();
+        self.state = STATE.INITIALIZED;
+    }
+    startSteamAndGame() {
+        var self = this;
+        steamStartQueue.push(function() {
+            self.spawnSteam();
+            self.state = STATE.STARTING;
+            self.timeoutGameStart = setTimeout(function() {
+                gameStartQueue.push(self.spawnGame.bind(self));
+            }, TIMEOUT_START_GAME);
+        });
+    }
+    spawnSteam() {
+        var self = this;
+        if (self.procSteam) {
+            self.log('[ERROR] Steam is already running!');
+            return;
+        }
+        self.procSteam = child_process.spawn('steam', LAUNCH_OPTIONS_STEAM
+            .replace("$LOGIN", self.account.login)
+            .replace("$PASSWORD", self.account.password).split(' '), self.spawnOptions);
+        self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
+        self.procSteam.stdout.pipe(self.logSteam);
+        self.procSteam.stderr.pipe(self.logSteam);
+        self.procSteam.on('exit', self.handleSteamExit.bind(self));
+        self.log(`Launched Steam (${self.procSteam.pid})`);
+        self.emit('start-steam', self.procSteam.pid);
+    }
+    killSteam() {
+        child_process.spawn('killall', ['steam'], this.spawnOptions);
+    }
+    spawnGame() {
+        var self = this;
+        if (self.procGame) {
+            self.log('[ERROR] Game is already running!');
+            return;
+        }
+        self.procGame = child_process.spawn('bash', LAUNCH_OPTIONS_GAME.split(' '), self.spawnOptions);
+        self.gameStarted = Date.now();
+        self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
+        self.procGame.stdout.pipe(self.logGame);
+        self.procGame.stderr.pipe(self.logGame);
+        self.procGame.on('exit', self.handleGameExit.bind(self));
+
+        clearTimeout(self.timeoutIPCState);
+        clearTimeout(self.timeoutInjection);
+        clearTimeout(self.timeoutGameStart);
+
+        self.state = STATE.WAITING_INJECT
+        self.timeoutInjection = setTimeout(self.inject.bind(self), TIMEOUT_INJECT_LIBRARY);
+
+        self.log(`Launched game (${self.procGame.pid})`);
+        self.emit('start-game', self.procGame.pid);
+    }
+    handleSteamExit(code, signal) {
+        var self = this;
+        self.log(`Steam (${self.procSteam.pid}) exited with code ${code}, signal ${signal}`);
+        self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
+        self.emit('exit-steam');
+        delete self.procSteam;
+    }
+    handleGameExit(code, signal) {
+        var self = this;
+        self.log(`Game (${self.procGame.pid}) exited with code ${code}, signal ${signal}`);
+        self.emit('exit-game');
+        self.ipcState = null;
+        if (self.procSteam)
+            self.killSteam();
+        delete self.procGame;
     }
     stop() {
         var self = this;
-        self.log('Stopping bot');
-        self.state = STATE.INITIALIZING;
-        self.killSteam(function() {
-            self.killGame(function() {
-                self.log('Bot stopped');
-            });
-        });
+        self.log('Stopping...');
+        clearTimeout(self.timeoutSteamRestart);
+        clearTimeout(self.timeoutGameStart);
+        clearTimeout(self.timeoutInjection);
+        clearTimeout(self.timeoutIPCState);
+        self.state = STATE.STOPPING;
+        self.ipcState = null;
+        self.kill();
+        self.log('Bot stopped');
+        self.emit('stop');
     }
     log(message) {
         console.log(`[${timestamp('HH:mm:ss')}][${this.name}][${this.state}] ${message}`);
     }
-    killSteam(callback) {
-        this.log('Killing steam processes...');
+    kill(force) {
         var self = this;
-        if (self.steam) {
-            self.steam.kill('SIGKILL');
-            self.steam = 0;
-            if (callback)
-                callback();
-        } else {
-            var cp = child_process.spawn('killall', ['-9', 'steam'], { uid: parseInt(this.user.uid), gid: parseInt(this.user.gid) });
-            if (callback) {
-                cp.on('exit', callback);
+        self.log('Killing all steam/game processes...');
+        // Steam startup script doesn't really obey signals
+        self.killSteam();
+        if (self.procGame)
+            self.procGame.kill(force ? 'SIGKILL' : undefined);
+    }
+    restart() {
+        var self = this;
+
+        if (self.state == STATE.PREPARING) return;
+        self.state = STATE.PREPARING;
+        self.log('Preparing to restart with new account...');
+        if (self.state == STATE.RESTARTING) {
+            self.log('Duplicate restart?');
+        }
+        if (self.account) {
+            self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
+        }
+        self.kill();
+        clearTimeout(self.timeoutSteamRestart);
+        clearTimeout(self.timeoutGameStart);
+        clearTimeout(self.timeoutInjection);
+        clearTimeout(self.timeoutIPCState);
+        self.state = STATE.RESTARTING;
+        accounts.get(function(err, acc) {
+            if (err) {
+                self.state = STATE.WAITING_ACCOUNT;
+                setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
+                self.log('Error while getting account!');
+                return;
             }
-        }
-    }
-    killGame(callback) {
-        this.log('Killing game processes...');
-        var cp = child_process.spawn('killall', ['-9', 'hl2_linux'], { uid: parseInt(this.user.uid), gid: parseInt(this.user.gid) });
-        if (callback) {
-            cp.on('exit', callback);
-        }
-    }
-    startGameInternal(acc) {
-        this.state = STATE.STARTING;
-        var self = this;
-        self.log(`Logging in into account ${acc.login}`);
-        self.steam = child_process.spawn('steam',
-            LAUNCH_OPTIONS
-                .replace("$LOGIN", acc.login)
-                .replace("$PASSWORD", acc.password).split(' '),
-            { uid: parseInt(this.user.uid), gid: parseInt(this.user.gid), env: { DISPLAY: ":0", HOME: self.user.home, USER: self.user.name } });
-        self.handleGameTimeout = setTimeout(self.onGameTimeout.bind(self), 45 * 1000);
-    }
-    restartGame(callback) {
-        this.state = STATE.PREPARING;
-        var self = this;
-        self.log('Trying to restart with new account');
-        self.killGame(function() {
-            self.killSteam(function() {
-                procevt.once('update', function() {
-                    self.state = STATE.RESTARTING;
-                });
-                accounts.get(function(err, acc) {
-                    if (err) {
-                        setTimeout(self.restartGame.bind(self), 15 * 1000);
-                        self.log('Error while getting account, retrying in 15 seconds');
-                        return;
-                    }
-                    startQueue.push(self.startGameInternal.bind(self, acc));
-                });
-                if (callback)
-                    callback();
-            });
+            self.account = acc;
+            self.startSteamAndGame();
         });
-    }
-    onGameTimeout() {
-        var self = this;
-        this.log('Game timed out!');
-        this.emit('game-timeout');
-        this.restartGame();
-    }
-    onGameDeath(game) {
-        if (this.state == STATE.INITIALIZING || this.state == STATE.PREPARING) {
-            return;
-        }
-        var self = this;
-        if (!self.game) return;
-        this.emit('game-crash');
-        this.log('Game crashed!');
-        clearTimeout(this.handleGameTimeout);
-        clearTimeout(this.handleInjection);
-        this.handleGameTimeout = 0;
-        this.handleInjection = 0;
-        self.game = 0;
-        this.restartGame();
-    }
-    onGameBirth(game) {
-        if (this.state == STATE.INITIALIZING) {
-            return;
-        }
-        this.gameStarted = Date.now();
-        this.log('Game started ' + game.pid);
-        this.game = game;
-        clearTimeout(this.handleGameTimeout);
-        clearTimeout(this.handleInjection);
-        this.handleGameTimeout = 0;
-        this.handleInjection = setTimeout(this.inject.bind(this), 20 * 1000);
-        this.state = STATE.WAITING_INJECT;
-        this.emit('game-start');
     }
     inject() {
         var self = this;
-        this.handleInjection = 0;
-        if (!this.game) {
-            console.log('Tried to inject into non-running game! There\'s an error in code!');
+
+        clearTimeout(self.timeoutInjection);
+        clearTimeout(self.timeoutIPCState);
+
+        if (!self.procGame) {
+            self.log('Tried to inject into non-running game! There\'s an error in code!');
             return;
         }
-        this.state = STATE.INJECTING;
-        injectManager.inject(this.game.pid, function(error) {
-            if (!error) {
-                self.emit('inject');
-            } else {
-                self.emit('inject-error');
-            }
+        var pid = self.procGame.pid;
+        if (injectManager.injected(pid)) {
+            self.log('Already injected!');
+            return;
+        }
+
+        self.state = STATE.INJECTING;
+
+        injectQueue.push(function() {
+            self.log(`Injecting into ${pid}`);
+            self.ipcState = null;
+            self.procInject = child_process.spawn('bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
+            self.state = STATE.INJECTED;
+            self.timeoutIPCState = setTimeout(function() {
+                if (!self.ipcState) {
+                    self.log(`IPC data timed out! Failed to inject?`);
+                    self.restart();
+                }
+            }, TIMEOUT_IPC_STATE);
         });
     }
 }

@@ -2,6 +2,12 @@ const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
 
+class Process extends EventEmitter {
+    constructor() {
+        super();
+    }
+}
+
 class ProcEvents extends EventEmitter {
     constructor() {
         super();

@@ -11,9 +11,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({ extended: true }));
 
-(require('./forever/app'))(app);
-
 const cc = new CathookConsole();
+
+(require('./forever/app'))(app, cc);
 
 cc.once('init', () => {
     cc.command('connect');

@@ -13,6 +13,7 @@
     "express": "^4.15.4",
     "request": "^2.81.0",
     "sudo": "^1.0.3",
-    "time-stamp": "^2.0.0"
+    "time-stamp": "^2.0.0",
+    "underscore": "^1.8.3"
   }
 }

@@ -7,20 +7,22 @@ const Bot = require('./bot');
 const passwd = require('./passwd');
 const BotManager = require('./botmanager');
 
-const manager = new BotManager();
+var manager = null;
 
-procevt.start();
-
-procevt.on('init', () => {
-	console.log('procevt init done!');
-});
-
-module.exports = function(app) {
+module.exports = function(app, cc) {
 
 	if (process.getuid() != 0) {
 		console.log('[FATAL] Bot manager needs superuser privileges, please restart as root');
 		process.exit(1);
 	}
+	if (manager) {
+		console.log('[FATAL] Initialized function for bot manager called twice');
+		process.exit(1);
+	} else {
+		 manager = new BotManager(cc);
+	}
+
+	this.manager = manager;
 
 	app.get('/list', function(req, res) {
 		var result = {};
@@ -39,6 +41,8 @@ module.exports = function(app) {
 		var result = { bots: {} };
 		for (var i of manager.bots) {
 			result.bots[i.name] = {
+				ipc: i.ipcState,
+				ipcID: i.ipcID,
 				state: i.state,
 				started: i.gameStarted,
 				pid: i.game
@@ -50,7 +54,7 @@ module.exports = function(app) {
 	app.get('/bot/:bot/restart', function(req, res) {
 		var bot = manager.bot(req.params.bot);
 		if (bot) {
-			bot.restartGame();
+			bot.restart();
 			res.status(200).end();
 		} else {
 			res.status(400).send({
