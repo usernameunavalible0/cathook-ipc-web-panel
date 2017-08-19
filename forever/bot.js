@@ -12,7 +12,6 @@ const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
 
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD";
-const LAUNCH_OPTIONS_GAME = "start.sh -game tf -textmode -steam -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
 const TIMEOUT_START_GAME = 10000;
@@ -139,7 +138,7 @@ class Bot extends EventEmitter {
             self.log('[ERROR] Game is already running!');
             return;
         }
-        self.procGame = child_process.spawn('bash', LAUNCH_OPTIONS_GAME.split(' '), self.spawnOptions);
+        self.procGame = child_process.spawn('bash', 'start.sh', self.spawnOptions);
         self.gameStarted = Date.now();
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
         self.procGame.stdout.pipe(self.logGame);
