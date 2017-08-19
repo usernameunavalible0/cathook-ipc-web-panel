@@ -138,7 +138,7 @@ class Bot extends EventEmitter {
             self.log('[ERROR] Game is already running!');
             return;
         }
-        self.procGame = child_process.spawn('bash', 'start.sh', self.spawnOptions);
+        self.procGame = child_process.spawn('bash', ['start.sh'], self.spawnOptions);
         self.gameStarted = Date.now();
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
         self.procGame.stdout.pipe(self.logGame);
