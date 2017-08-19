@@ -9,7 +9,9 @@ const USERNAMES = 'catbot-';
 class BotManager {
     constructor(cc) {
         var self = this;
-        fs.mkdirSync('logs');
+        try {
+            fs.mkdirSync('logs');
+        } catch(e) {}
         this.bots = [];
         this.cc = cc;
         this.quota = 0;
