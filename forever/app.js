@@ -11,6 +11,8 @@ var manager = null;
 
 module.exports = function(app, cc) {
 
+	procevt.start();
+
 	if (process.getuid() != 0) {
 		console.log('[FATAL] Bot manager needs superuser privileges, please restart as root');
 		process.exit(1);

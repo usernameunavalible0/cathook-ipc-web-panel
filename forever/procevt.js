@@ -3,8 +3,11 @@ const fs = require('fs');
 const path = require('path');
 
 class Process extends EventEmitter {
-    constructor() {
+    constructor(pid, uid, name) {
         super();
+        this.pid = pid;
+        this.uid = uid;
+        this.name = name;
     }
 }
 
@@ -17,7 +20,7 @@ class ProcEvents extends EventEmitter {
         this.setMaxListeners(32);
     }
     start() {
-        this.interval = setInterval(this.update.bind(this), 1000);
+        this.interval = setInterval(this.update.bind(this), 500);
     }
     stop() {
         clearInterval(this.interval);
@@ -29,18 +32,18 @@ class ProcEvents extends EventEmitter {
                 return;
                 console.log(err);
             };
-            var proc = { pid: pid, name: '', uid: '' };
+            var name = '';
+            var uid = '';
             var lines = data.toString().split('\n');
             lines.forEach(function(line) {
                 var match_name = /Name:\t(.+)$/i.exec(line);
                 var match_uid = /Uid:\t\d+\t(\d+)/.exec(line);
-                if (match_name) proc.name = match_name[1];
-                if (match_uid) proc.uid = match_uid[1];
+                if (match_name) name = match_name[1];
+                if (match_uid) uid = match_uid[1];
             });
-            self.cache[pid] = proc;
+            self.cache[pid] = new Process(pid, uid, name);
             if (!self.init) {
-                //console.log(`Process ${JSON.stringify(proc)} spawned`);
-                self.emit('birth', proc);
+                self.emit('birth', self.cache[pid]);
             }
         });
     }
@@ -48,8 +51,8 @@ class ProcEvents extends EventEmitter {
         var self = this;
         fs.stat(`/proc/${pid}`, function(err, stat) {
             if (err) {
-                //console.log(`Process ${JSON.stringify(self.cache[pid])} died!`);
                 self.emit('death', self.cache[pid]);
+                self.cache[pid].emit('exit');
                 delete self.cache[pid];
             }
         });
@@ -91,7 +94,7 @@ class ProcEvents extends EventEmitter {
         var result = [];
         for (var key in self.cache) {
             if (self.cache[key].uid == uid && self.cache[key].name == name) {
-                result.push(key);
+                result.push(self.cache[key]);
             }
         }
         return result;

@@ -11,10 +11,10 @@ const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
 
-const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD";
+const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
-const TIMEOUT_START_GAME = 10000;
+const TIMEOUT_START_GAME = 15000;
 const TIMEOUT_INJECT_LIBRARY = 25000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
 const TIMEOUT_IPC_STATE = 10000;
@@ -130,7 +130,7 @@ class Bot extends EventEmitter {
         self.emit('start-steam', self.procSteam.pid);
     }
     killSteam() {
-        child_process.spawn('killall', ['steam'], this.spawnOptions);
+        child_process.spawn('killall', ['steam', '-9'], this.spawnOptions);
     }
     spawnGame() {
         var self = this;
@@ -138,11 +138,18 @@ class Bot extends EventEmitter {
             self.log('[ERROR] Game is already running!');
             return;
         }
-        self.procGame = child_process.spawn('bash', ['start.sh'], self.spawnOptions);
+        var res = procevt.find('hl2_linux', self.user.uid);
+        if (!res.length) {
+            self.log('[ERROR] Could not find running game!');
+            if (!self.stopped)
+                self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
+            return;
+        }
+        self.procGame = res[0];//child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
         self.gameStarted = Date.now();
-        self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-        self.procGame.stdout.pipe(self.logGame);
-        self.procGame.stderr.pipe(self.logGame);
+        //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
+        //self.procGame.stdout.pipe(self.logGame);
+        //self.procGame.stderr.pipe(self.logGame);
         self.procGame.on('exit', self.handleGameExit.bind(self));
 
         clearTimeout(self.timeoutIPCState);
@@ -152,13 +159,14 @@ class Bot extends EventEmitter {
         self.state = STATE.WAITING_INJECT
         self.timeoutInjection = setTimeout(self.inject.bind(self), TIMEOUT_INJECT_LIBRARY);
 
-        self.log(`Launched game (${self.procGame.pid})`);
+        self.log(`Found game (${self.procGame.pid})`);
         self.emit('start-game', self.procGame.pid);
     }
     handleSteamExit(code, signal) {
         var self = this;
         self.log(`Steam (${self.procSteam.pid}) exited with code ${code}, signal ${signal}`);
-        self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
+        if (!self.stopped)
+            self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
         self.emit('exit-steam');
         delete self.procSteam;
     }
@@ -173,6 +181,7 @@ class Bot extends EventEmitter {
     }
     stop() {
         var self = this;
+        self.stopped = true;
         self.log('Stopping...');
         clearTimeout(self.timeoutSteamRestart);
         clearTimeout(self.timeoutGameStart);
@@ -192,8 +201,10 @@ class Bot extends EventEmitter {
         self.log('Killing all steam/game processes...');
         // Steam startup script doesn't really obey signals
         self.killSteam();
-        if (self.procGame)
-            self.procGame.kill(force ? 'SIGKILL' : undefined);
+        self.killGame();
+    }
+    killGame() {
+        child_process.spawn('killall', ['hl2_linux', '-9'], this.spawnOptions);
     }
     restart() {
         var self = this;

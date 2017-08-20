@@ -28,8 +28,8 @@ fi
 mkdir -p /tmp/cathook-backtraces
 
 #killall -19 steam
-killall -9 steamwebhelper
-killall -9 gameoverlayui
+#killall -9 steamwebhelper
+#killall -9 gameoverlayui
 
 echo "Injecting..."
 

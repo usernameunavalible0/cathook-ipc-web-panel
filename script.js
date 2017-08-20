@@ -102,7 +102,7 @@ function updateIPCData(row, id, data) {
 		return;
 	}
 	var time = Math.floor(Date.now() / 1000 - data.heartbeat);
-	if (!data.heartbeat || time < 2) {
+	if (!data.heartbeat || time < 4) {
 		row.find('.client-status').removeClass('error warning').text('OK ' + time);
 	} else if (time < 45) {
 		row.find('.client-status').removeClass('error').addClass('warning').text('Warning ' + time);
