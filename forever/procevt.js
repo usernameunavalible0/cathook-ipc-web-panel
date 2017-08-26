@@ -51,9 +51,13 @@ class ProcEvents extends EventEmitter {
         var self = this;
         fs.stat(`/proc/${pid}`, function(err, stat) {
             if (err) {
-                self.emit('death', self.cache[pid]);
-                self.cache[pid].emit('exit');
-                delete self.cache[pid];
+		try {
+                	self.emit('death', self.cache[pid]);
+                	self.cache[pid].emit('exit');
+                	delete self.cache[pid];
+		} catch (e) {
+			console.log(e);
+		}
             }
         });
     }
