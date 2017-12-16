@@ -26,7 +26,7 @@ module.exports = function(app, cc) {
 
 	this.manager = manager;
 
-	app.get('/list', function(req, res) {
+	app.get('/api/list', function(req, res) {
 		var result = {};
 		result.quota = manager.quota;
 		result.count = manager.bots.length;
@@ -39,7 +39,7 @@ module.exports = function(app, cc) {
 		res.send(result);
 	});
 
-	app.get('/state', function(req, res) {
+	app.get('/api/state', function(req, res) {
 		var result = { bots: {} };
 		for (var i of manager.bots) {
 			result.bots[i.name] = {
@@ -53,7 +53,7 @@ module.exports = function(app, cc) {
 		res.send(result);
 	});
 
-	app.get('/bot/:bot/restart', function(req, res) {
+	app.get('/api/bot/:bot/restart', function(req, res) {
 		var bot = manager.bot(req.params.bot);
 		if (bot) {
 			bot.restart();
@@ -65,7 +65,7 @@ module.exports = function(app, cc) {
 		}
 	});
 
-	app.get('/quota/:quota', function(req, res) {
+	app.get('/api/quota/:quota', function(req, res) {
 		manager.setQuota(req.params.quota);
 		res.send({
 			quota: manager.quota

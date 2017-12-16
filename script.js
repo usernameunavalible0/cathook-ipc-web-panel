@@ -34,7 +34,7 @@ const status = {
 var last_count = 0;
 
 function updateData() {
-	request('state', function(error, r, b) {
+	request('api/state', function(error, r, b) {
 		if (error) return;
 		var data = JSON.parse(b);
 		if (last_count != Object.keys(data.bots).length) {
@@ -58,7 +58,7 @@ function commandButtonCallback() {
 
 function restartButtonCallback() {
 	console.log('restarting',$(this).parent().parent().attr('data-id'));
-    request(`bot/${$(this).parent().parent().attr('data-id')}/restart`, function(e, r, b) {
+    request(`api/bot/${$(this).parent().parent().attr('data-id')}/restart`, function(e, r, b) {
 		if (e) {
 			console.log(e,b);
 			status.error('Error restarting bot');
@@ -70,7 +70,7 @@ function restartButtonCallback() {
 
 function cmd(command, data, callback) {
 	request.post({
-		url: 'direct/' + command,
+		url: 'api/direct/' + command,
 		body: JSON.stringify(data),
 		headers: {
 			"Content-Type": "application/json"
@@ -111,7 +111,7 @@ function updateIPCData(row, id, data) {
 			if ((Date.now() - data.ts_injected * 1000 > 20) && data.heartbeat && !autorestart[row.attr('data-id')] || (Date.now() - autorestart[row.attr('data-id')]) > 1000 * 5) {
 				autorestart[row.attr('data-id')] = Date.now();
 				console.log('auto-restarting' ,row.attr('data-id'));
-			    request(`bot/${row.attr('data-id')}/restart`, function(e, r, b) {
+			    request(`api/bot/${row.attr('data-id')}/restart`, function(e, r, b) {
 					if (e) {
 						console.log(e,b);
 						status.error('Error restarting bot ' + JSON.stringify(data));
@@ -216,7 +216,7 @@ function runCommand() {
 function refreshComplete() {
 	$("#clients tr").slice(1).remove();
 	request.get({
-		url: 'list'
+		url: 'api/list'
 	}, function(e, r, b) {
 		if (e) {
 			console.log(e, b);
@@ -245,7 +245,7 @@ $(function() {
 		}
 	});
 	$('#bot-quota-apply').on('click', function() {
-		request.get('quota/' + $('#bot-quota').val(), function(e, r, b) {
+		request.get('api/quota/' + $('#bot-quota').val(), function(e, r, b) {
 			if (e) {
 				console.log(e, b);
 				status.error('Error applying bot quota!');
@@ -254,6 +254,17 @@ $(function() {
 			}
 		});
 	});
+    $('#api-login-button').on('click', () => {
+        let password = $('#api-password').val();
+        request.post({
+            uri: "api/auth",
+            form: {
+                password: password
+            }
+        }, (e, r, b) => {
+            console.log(b);
+        });
+    });
 	$('#bot-refresh').on('click', refreshComplete);
 	$('#console-send').on('click', runCommand);
 });

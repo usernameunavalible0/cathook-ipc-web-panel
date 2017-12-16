@@ -7,6 +7,12 @@
     </head>
     <body class="vgui-container vgui-font">
         <h1>Cathook IPC Control Panel</h1>
+        <div id="container-login" class="vgui-outset">
+            If you don't see any data, please login using the password shown in console and refresh the page
+            <input id="api-password" type="text" placeholder="Password">
+            <input id="api-login-button" type="button" value="Login">
+        </div>
+        <br>
         <div id="console-container">
             <span><input type="text" id="console" placeholder="command for every client" size=64 class="vgui-border-inset"></span>
             <input type="button" id="console-send" value="Submit" class="vgui-border-out">

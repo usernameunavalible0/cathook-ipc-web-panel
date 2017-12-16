@@ -40,7 +40,7 @@ gdb -n -q -batch \
   -ex "call dlerror()" \
   -ex 'print (char *) $2' \
   -ex "detach" \
-  -ex "quit" >/tmp/cathook-backtraces/$proc.log
+  -ex "quit" >/dev/null
 #  -ex "continue" \
 #  -ex "backtrace" > /tmp/cathook-backtraces/$proc.log &
 

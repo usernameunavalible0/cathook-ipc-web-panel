@@ -77,7 +77,7 @@ class Bot extends EventEmitter {
             cwd: GAME_CWD,
             env: {
                 USER: self.user.name,
-                DISPLAY: ":0",
+                DISPLAY: process.env.DISPLAY,
                 HOME: this.user.home
             }
         }
@@ -119,18 +119,19 @@ class Bot extends EventEmitter {
             self.log('[ERROR] Steam is already running!');
             return;
         }
-        self.procSteam = child_process.spawn('steam', LAUNCH_OPTIONS_STEAM
+        self.procSteam = child_process.spawn('/usr/bin/steam', LAUNCH_OPTIONS_STEAM
             .replace("$LOGIN", self.account.login)
             .replace("$PASSWORD", self.account.password).split(' '), self.spawnOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.procSteam.stdout.pipe(self.logSteam);
         self.procSteam.stderr.pipe(self.logSteam);
         self.procSteam.on('exit', self.handleSteamExit.bind(self));
-        self.log(`Launched Steam (${self.procSteam.pid})`);
+        self.log(`Launched Steam (${self.procSteam.pid}) as ${self.account.steamID}`);
         self.emit('start-steam', self.procSteam.pid);
     }
     killSteam() {
-        child_process.spawn('killall', ['steam', '-9'], this.spawnOptions);
+        this.log('Killing steam');
+        let cp = child_process.spawn('/usr/bin/killall', ['steam', '-9'], this.spawnOptions);
     }
     spawnGame() {
         var self = this;
@@ -204,7 +205,9 @@ class Bot extends EventEmitter {
         self.killGame();
     }
     killGame() {
-        child_process.spawn('killall', ['hl2_linux', '-9'], this.spawnOptions);
+        this.log('Killing game');
+        let cp = child_process.spawn('/usr/bin/killall', ['hl2_linux', '-9'], this.spawnOptions);
+        cp.on('error', () => {});
     }
     restart() {
         var self = this;
@@ -256,7 +259,7 @@ class Bot extends EventEmitter {
         injectQueue.push(function() {
             self.log(`Injecting into ${pid}`);
             self.ipcState = null;
-            self.procInject = child_process.spawn('bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
+            self.procInject = child_process.spawn('/bin/bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
             self.state = STATE.INJECTED;
             self.timeoutIPCState = setTimeout(function() {
                 if (!self.ipcState) {
