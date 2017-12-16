@@ -14,7 +14,7 @@ const injectManager = require('./injection');
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
-const TIMEOUT_START_GAME = 15000;
+const TIMEOUT_START_GAME = 30000;
 const TIMEOUT_INJECT_LIBRARY = 25000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
 const TIMEOUT_IPC_STATE = 10000;
