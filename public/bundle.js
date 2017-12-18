@@ -10980,9 +10980,9 @@ function updateUserData(bot, data) {
 	if (!row.length) return;
 	row.toggleClass('stopped', data.state != 6);
 	row.find('.client-state').text(STATE[data.state]);
-	if (data.state == 6 && data.pid) {
-		row.attr('data-pid', data.pid.pid);
-		row.find('.client-pid').text(data.pid.pid);
+	if (data.state == 6 && data.ipc) {
+		row.attr('data-pid', data.ipc.pid);
+		row.find('.client-pid').text(data.ipc.pid);
 		row.find('.client-uptime-total').text(format(Date.now() - data.started));
 	}
 	if (data.state != 6) {
