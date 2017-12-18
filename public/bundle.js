@@ -10884,6 +10884,18 @@ function restartButtonCallback() {
 	});
 }
 
+function terminateButtonCallback() {
+	console.log('terminating',$(this).parent().parent().attr('data-id'));
+    request(`api/bot/${$(this).parent().parent().attr('data-id')}/terminate`, function(e, r, b) {
+		if (e) {
+			console.log(e,b);
+			status.error('Error terminating bot');
+		} else {
+			status.info('Bot restarted');
+		}
+	});
+}
+
 function cmd(command, data, callback) {
 	request.post({
 		url: 'api/direct/' + command,
@@ -11019,6 +11031,7 @@ function addClientRow(botid, username) {
     var actions = $('<td></td>').attr('class', 'client-actions');
     actions.append($('<input>').attr('type', 'button').attr('value', 'Command').on('click', commandButtonCallback));
     actions.append($('<input>').attr('type', 'button').attr('value', 'Restart').on('click', restartButtonCallback));
+    actions.append($('<input>').attr('type', 'button').attr('value', 'Terminate').on('click', terminateButtonCallback));
     row.append(actions);
     $('#clients').append(row);
     return row;

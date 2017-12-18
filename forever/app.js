@@ -65,6 +65,18 @@ module.exports = function(app, cc) {
 		}
 	});
 
+    app.get('/api/bot/:bot/terminate', function(req, res) {
+        var bot = manager.bot(req.params.bot);
+        if (bot) {
+            bot.stop();
+            res.status(200).end();
+        } else {
+            res.status(400).send({
+                'error': 'Bot does not exist'
+            })
+        }
+    });
+
 	app.get('/api/quota/:quota', function(req, res) {
 		manager.setQuota(req.params.quota);
 		res.send({
