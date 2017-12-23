@@ -6,6 +6,7 @@ const procevt = require('./procevt');
 const Bot = require('./bot');
 const passwd = require('./passwd');
 const BotManager = require('./botmanager');
+const config = require('./config');
 
 var manager = null;
 
@@ -25,6 +26,23 @@ module.exports = function(app, cc) {
 	}
 
 	this.manager = manager;
+
+    app.post('/api/config/:option/:value', (req, res) => {
+        if (!config.hasOwnProperty(req.params.option))
+            res.status(404).end();
+        else
+        {
+            console.log(`Switching ${req.params.option} to ${req.params.value}`)
+            config[req.params.option] = req.params.value;
+            res.status(200).end(config[req.params.option]);
+        }
+    });
+    app.get('/api/config/:option', (req, res) => {
+        if (!config.hasOwnProperty(req.params.option))
+            res.status(404).end();
+        else
+            res.status(200).end(config[req.params.option]);
+    });
 
 	app.get('/api/list', function(req, res) {
 		var result = {};

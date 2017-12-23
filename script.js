@@ -189,6 +189,11 @@ function updateUserData(bot, data) {
 
 function addClientRow(botid, username) {
     var row = $('<tr></tr>').attr('data-id', botid).addClass('disconnected stopped');
+    var actions = $('<td></td>').attr('class', 'client-actions');
+    actions.append($('<input>').attr('type', 'button').attr('value', 'Command').on('click', commandButtonCallback));
+    actions.append($('<input>').attr('type', 'button').attr('value', 'Restart').on('click', restartButtonCallback));
+    actions.append($('<input>').attr('type', 'button').attr('value', 'Terminate').on('click', terminateButtonCallback));
+    row.append(actions);
 	row.append($('<td></td>').attr('class', 'client-bot-name').text(botid));
 	row.append($('<td></td>').attr('class', 'client-user').text(username));
 	row.append($('<td></td>').attr('class', 'client-state').text("UNDEFINED"));
@@ -212,11 +217,6 @@ function addClientRow(botid, username) {
     row.append($('<td></td>').attr('class', 'client-x connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-y connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-z connected active').text('N/A'));
-    var actions = $('<td></td>').attr('class', 'client-actions');
-    actions.append($('<input>').attr('type', 'button').attr('value', 'Command').on('click', commandButtonCallback));
-    actions.append($('<input>').attr('type', 'button').attr('value', 'Restart').on('click', restartButtonCallback));
-    actions.append($('<input>').attr('type', 'button').attr('value', 'Terminate').on('click', terminateButtonCallback));
-    row.append(actions);
     $('#clients').append(row);
     return row;
 }
@@ -245,6 +245,15 @@ function refreshComplete() {
 		}
 		last_count = count;
 	})
+}
+
+function queryConfig() {
+    request.get({
+        url: '/api/config/nodiscard'
+    }, function(e, r, b) {
+        console.log('c', b);
+        $('#check-no-discard').attr('checked', b);
+    });
 }
 
 $(function() {
@@ -280,4 +289,13 @@ $(function() {
     });
 	$('#bot-refresh').on('click', refreshComplete);
 	$('#console-send').on('click', runCommand);
+    $('#check-no-discard').on('click', () => {
+        request.post({
+            uri: `api/config/nodiscard/${$('#check-no-discard').prop('checked')}`
+        }, (e, r, b) => {
+            console.log(b);
+            queryConfig();
+        });
+    });
+    queryConfig();
 });

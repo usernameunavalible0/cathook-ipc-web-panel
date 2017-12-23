@@ -10,6 +10,7 @@ const procevt = require('./procevt');
 const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
+const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
@@ -218,7 +219,7 @@ class Bot extends EventEmitter {
         if (self.state == STATE.RESTARTING) {
             self.log('Duplicate restart?');
         }
-        if (self.account) {
+        if (self.account && !config.nodiscard) {
             self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
         }
         self.kill();
@@ -227,16 +228,23 @@ class Bot extends EventEmitter {
         clearTimeout(self.timeoutInjection);
         clearTimeout(self.timeoutIPCState);
         self.state = STATE.RESTARTING;
-        accounts.get(function(err, acc) {
-            if (err) {
-                self.state = STATE.WAITING_ACCOUNT;
-                setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
-                self.log('Error while getting account!');
-                return;
-            }
-            self.account = acc;
+        if (config.nodiscard && self.account)
+        {
             self.startSteamAndGame();
-        });
+        }
+        else
+        {
+            accounts.get(function(err, acc) {
+                if (err) {
+                    self.state = STATE.WAITING_ACCOUNT;
+                    setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
+                    self.log('Error while getting account!');
+                    return;
+                }
+                self.account = acc;
+                self.startSteamAndGame();
+            });
+        }
     }
     inject() {
         var self = this;

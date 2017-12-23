@@ -28,7 +28,7 @@ body {
     color: #a1aa95;
 }
 
-#clients tr:not(:first-child) td:last-child {
+#clients tr:not(:first-child) .client-actions {
     padding: 0;
 }
 
