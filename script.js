@@ -139,10 +139,10 @@ function updateIPCData(row, id, data) {
 	row.find('.client-pid').text(data.pid);
 	row.find('.client-id').text(id);
 	row.find('.client-name').text(data.name);
-	row.find('.client-total').text(data.total_score);
-	var hitrate = Math.floor((data.shots ? data.hits / data.shots : 0) * 100);
-	var hsrate = Math.floor((data.hits ? data.headshots / data.hits : 0) * 100);
-	row.find('.client-shots').text(data.shots);
+	row.find('.client-total').text(data.accumulated.score);
+	var hitrate = Math.floor((data.accumulated.shots ? data.accumulated.hits / data.accumulated.shots : 0) * 100);
+	var hsrate = Math.floor((data.accumulated.hits ? data.accumulated.headshots / data.accumulated.hits : 0) * 100);
+	row.find('.client-shots').text(data.accumulated.shots);
 	row.find('.client-hitrate').text(hitrate + '%');
 	row.find('.client-hsrate').text(hsrate + '%');
 	if (data.connected) {
@@ -151,15 +151,15 @@ function updateIPCData(row, id, data) {
 		if (data.ts_disconnected) {
 			row.find('.client-uptime-queue').text(format(1000 * (data.ts_connected - data.ts_disconnected)));
 		}
-		row.find('.client-ip').text(data.server);
-		row.find('.client-alive').text(data.life_state ? 'Dead' : 'Alive');
-		row.find('.client-team').text(teams[data.team]);
-		row.find('.client-class').text(classes[data.class]);
-		row.find('.client-score').text(data.score);
-		row.find('.client-health').text(data.health + '/' + data.health_max);
-		row.find('.client-x').text(Math.floor(data.x));
-		row.find('.client-y').text(Math.floor(data.y));
-		row.find('.client-z').text(Math.floor(data.z));
+		row.find('.client-ip').text(data.ingame.server);
+		row.find('.client-alive').text(data.ingame.life_state ? 'Dead' : 'Alive');
+		row.find('.client-team').text(teams[data.ingame.team]);
+		row.find('.client-class').text(classes[data.ingame.role]);
+		row.find('.client-score').text(data.ingame.score);
+		row.find('.client-health').text(data.ingame.health + '/' + data.ingame.health_max);
+        row.find('.client-map').text(data.ingame.mapname);
+        row.find('.client-players').text(data.ingame.player_count);
+        row.find('.client-bots').text(data.ingame.bot_count);
 	} else {
 		if (data.ts_disconnected) {
 			row.find('.client-uptime-queue').text(format(Date.now() - data.ts_disconnected * 1000));
@@ -180,6 +180,8 @@ function updateUserData(bot, data) {
 		row.attr('data-pid', data.ipc.pid);
 		row.find('.client-pid').text(data.ipc.pid);
 		row.find('.client-uptime-total').text(format(Date.now() - data.started));
+        row.find('.client-restarts').text(data.restarts);
+        row.find('.client-steam').empty().append($('<a></a>').text('Profile').attr('href', `https://steamcommunity.com/profiles/${data.steamID}`).attr('target', '_blank'));
 	}
 	if (data.state != 6) {
 		row.find('.active').text('N/A');
@@ -194,29 +196,31 @@ function addClientRow(botid, username) {
     actions.append($('<input>').attr('type', 'button').attr('value', 'Restart').on('click', restartButtonCallback));
     actions.append($('<input>').attr('type', 'button').attr('value', 'Terminate').on('click', terminateButtonCallback));
     row.append(actions);
-	row.append($('<td></td>').attr('class', 'client-bot-name').text(botid));
+	row.append($('<td></td>').attr('class', 'client-restarts').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-bot-name').text(botid));
 	row.append($('<td></td>').attr('class', 'client-user').text(username));
-	row.append($('<td></td>').attr('class', 'client-state').text("UNDEFINED"));
+	row.append($('<td></td>').attr('class', 'client-state').text('UNDEFINED'));
+	row.append($('<td></td>').attr('class', 'client-steam').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-uptime-total active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-pid active').text('N/A'));
 	row.append($('<td></td>').attr('class', 'client-id active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-status active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-name active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-uptime-queue active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-total active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-score connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-shots active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-hitrate active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-hsrate active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-uptime-queue active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-ip connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-uptime-server connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-alive connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-team connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-class connected active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-score connected active').text('N/A'));
     row.append($('<td></td>').attr('class', 'client-health connected active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-x connected active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-y connected active').text('N/A'));
-    row.append($('<td></td>').attr('class', 'client-z connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-ip connected active').text('N/A'));
+    row.append($('<td></td>').attr('class', 'client-map connected active').text('NYI'));
+    row.append($('<td></td>').attr('class', 'client-players connected active').text('NYI'));
+    row.append($('<td></td>').attr('class', 'client-bots connected active').text('NYI'));
     $('#clients').append(row);
     return row;
 }
@@ -252,12 +256,14 @@ function queryConfig() {
         url: '/api/config/nodiscard'
     }, function(e, r, b) {
         console.log('c', b);
-        $('#check-no-discard').attr('checked', b);
+        $('#check-no-discard').attr('checked', JSON.parse(b));
+        console.log($('#check-no-discard').attr('checked'));
     });
 }
 
 $(function() {
 	updateData();
+    queryConfig();
     status.info('init done');
 	setInterval(updateData, 1000 * 2);
 	$('#console').on('keypress', function(e) {
@@ -297,5 +303,4 @@ $(function() {
             queryConfig();
         });
     });
-    queryConfig();
 });

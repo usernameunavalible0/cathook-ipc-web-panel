@@ -4,7 +4,7 @@ const fs = require('fs');
 const Bot = require('./bot');
 
 const users = new passwd.Passwd();
-const USERNAMES = 'catbot-';
+const USERNAMES = 'kisak-';
 
 class BotManager {
     constructor(cc) {

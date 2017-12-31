@@ -13,12 +13,13 @@ const injectManager = require('./injection');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
+//const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
 const TIMEOUT_START_GAME = 30000;
-const TIMEOUT_INJECT_LIBRARY = 25000;
+const TIMEOUT_INJECT_LIBRARY = 45000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
-const TIMEOUT_IPC_STATE = 10000;
+const TIMEOUT_IPC_STATE = 15000;
 const TIMEOUT_RESTART = 10000;
 
 const steamStartQueue = new ExecQueue(5000);
@@ -49,6 +50,7 @@ class Bot extends EventEmitter {
         this.user = user;
         this.stopped = false;
         this.account = null;
+        this.restarts = 0;
 
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
@@ -116,6 +118,7 @@ class Bot extends EventEmitter {
     }
     spawnSteam() {
         var self = this;
+        this.restarts++;
         if (self.procSteam) {
             self.log('[ERROR] Steam is already running!');
             return;
