@@ -20,11 +20,14 @@
     "body-parser": "^1.17.2",
     "browser-request": "^0.3.3",
     "express": "^4.15.4",
+    "express-session": "^1.15.6",
     "extend": "^3.0.1",
     "format-duration": "^1.0.0",
     "jquery": "^3.2.1",
+    "randomstring": "^1.1.5",
     "request": "^2.81.0",
     "sudo": "^1.0.3",
-    "time-stamp": "^2.0.0"
+    "time-stamp": "^2.0.0",
+    "underscore": "^1.8.3"
   }
 }

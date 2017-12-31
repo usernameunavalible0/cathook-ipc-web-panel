@@ -10,14 +10,16 @@ const procevt = require('./procevt');
 const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
+const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
+//const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
-const TIMEOUT_START_GAME = 15000;
-const TIMEOUT_INJECT_LIBRARY = 25000;
+const TIMEOUT_START_GAME = 30000;
+const TIMEOUT_INJECT_LIBRARY = 45000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
-const TIMEOUT_IPC_STATE = 10000;
+const TIMEOUT_IPC_STATE = 15000;
 const TIMEOUT_RESTART = 10000;
 
 const steamStartQueue = new ExecQueue(5000);
@@ -48,6 +50,7 @@ class Bot extends EventEmitter {
         this.user = user;
         this.stopped = false;
         this.account = null;
+        this.restarts = 0;
 
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
@@ -77,7 +80,7 @@ class Bot extends EventEmitter {
             cwd: GAME_CWD,
             env: {
                 USER: self.user.name,
-                DISPLAY: ":0",
+                DISPLAY: process.env.DISPLAY,
                 HOME: this.user.home
             }
         }
@@ -115,22 +118,24 @@ class Bot extends EventEmitter {
     }
     spawnSteam() {
         var self = this;
+        this.restarts++;
         if (self.procSteam) {
             self.log('[ERROR] Steam is already running!');
             return;
         }
-        self.procSteam = child_process.spawn('steam', LAUNCH_OPTIONS_STEAM
+        self.procSteam = child_process.spawn('/usr/bin/steam', LAUNCH_OPTIONS_STEAM
             .replace("$LOGIN", self.account.login)
             .replace("$PASSWORD", self.account.password).split(' '), self.spawnOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.procSteam.stdout.pipe(self.logSteam);
         self.procSteam.stderr.pipe(self.logSteam);
         self.procSteam.on('exit', self.handleSteamExit.bind(self));
-        self.log(`Launched Steam (${self.procSteam.pid})`);
+        self.log(`Launched Steam (${self.procSteam.pid}) as ${self.account.steamID}`);
         self.emit('start-steam', self.procSteam.pid);
     }
     killSteam() {
-        child_process.spawn('killall', ['steam', '-9'], this.spawnOptions);
+        this.log('Killing steam');
+        let cp = child_process.spawn('/usr/bin/killall', ['steam', '-9'], this.spawnOptions);
     }
     spawnGame() {
         var self = this;
@@ -204,7 +209,9 @@ class Bot extends EventEmitter {
         self.killGame();
     }
     killGame() {
-        child_process.spawn('killall', ['hl2_linux', '-9'], this.spawnOptions);
+        this.log('Killing game');
+        let cp = child_process.spawn('/usr/bin/killall', ['hl2_linux', '-9'], this.spawnOptions);
+        cp.on('error', () => {});
     }
     restart() {
         var self = this;
@@ -215,7 +222,7 @@ class Bot extends EventEmitter {
         if (self.state == STATE.RESTARTING) {
             self.log('Duplicate restart?');
         }
-        if (self.account) {
+        if (self.account && !config.nodiscard) {
             self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
         }
         self.kill();
@@ -224,16 +231,23 @@ class Bot extends EventEmitter {
         clearTimeout(self.timeoutInjection);
         clearTimeout(self.timeoutIPCState);
         self.state = STATE.RESTARTING;
-        accounts.get(function(err, acc) {
-            if (err) {
-                self.state = STATE.WAITING_ACCOUNT;
-                setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
-                self.log('Error while getting account!');
-                return;
-            }
-            self.account = acc;
+        if (config.nodiscard && self.account)
+        {
             self.startSteamAndGame();
-        });
+        }
+        else
+        {
+            accounts.get(function(err, acc) {
+                if (err) {
+                    self.state = STATE.WAITING_ACCOUNT;
+                    setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
+                    self.log('Error while getting account!');
+                    return;
+                }
+                self.account = acc;
+                self.startSteamAndGame();
+            });
+        }
     }
     inject() {
         var self = this;
@@ -256,7 +270,7 @@ class Bot extends EventEmitter {
         injectQueue.push(function() {
             self.log(`Injecting into ${pid}`);
             self.ipcState = null;
-            self.procInject = child_process.spawn('bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
+            self.procInject = child_process.spawn('/bin/bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
             self.state = STATE.INJECTED;
             self.timeoutIPCState = setTimeout(function() {
                 if (!self.ipcState) {

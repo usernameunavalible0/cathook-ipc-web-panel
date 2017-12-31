@@ -7,6 +7,12 @@
     </head>
     <body class="vgui-container vgui-font">
         <h1>Cathook IPC Control Panel</h1>
+        <div id="container-login" class="vgui-outset">
+            If you don't see any data, please login using the password shown in console and refresh the page
+            <input id="api-password" type="text" placeholder="Password">
+            <input id="api-login-button" type="button" value="Login">
+        </div>
+        <br>
         <div id="console-container">
             <span><input type="text" id="console" placeholder="command for every client" size=64 class="vgui-border-inset"></span>
             <input type="button" id="console-send" value="Submit" class="vgui-border-out">
@@ -22,36 +28,40 @@
         <div id="table-container">
             <table id="clients" class="vgui-table vgui-inset">
                 <tr>
+                    <td>Actions</td>
+                    <td>Restarts</td>
                     <td>Bot Name</td>
                     <td>User</td>
                     <td>State</td>
-                    <td>Uptime (T)</td>
+                    <td>Steam</td>
+                    <td>Uptime</td>
                     <td>PID</td>
                     <td>ID</td>
                     <td>IPC Status</td>
                     <td>Name</td>
+                    <td>Queue</td>
                     <td>Total Score</td>
+                    <td>Score</td>
                     <td>Shots</td>
-                    <td>HitRate</td>
-                    <td>HsRate</td>
-                    <td>Queue Time</td>
-                    <td>Server IP</td>
-                    <td>Uptime (S)</td>
+                    <td>Hit %</td>
+                    <td>Head %</td>
+                    <td>Connected</td>
                     <td>Alive?</td>
                     <td>Team</td>
                     <td>Class</td>
-                    <td>Score</td>
                     <td>Health</td>
-                    <td>X</td>
-                    <td>Y</td>
-                    <td>Z</td>
-                    <td>Actions</td>
+                    <td>Server IP</td>
+                    <td>Current map</td>
+                    <td>Players</td>
+                    <td>Bots</td>
                 </tr>
             </table>
         </div>
         <div>
             <div class="nopad vmiddle">
                 <input type="checkbox" id="autorestart-bots">Auto-restart nonresponsive bots</input>
+                <br>
+                <input type="checkbox" id="check-no-discard">Do not discard accounts</input>
             </div>
         </div>
         <div id="footer">

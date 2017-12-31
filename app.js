@@ -3,13 +3,28 @@ const express = require('express');
 const bodyparser = require('body-parser');
 const path = require('path');
 const forever = require('./forever/app');
+const fs = require('fs');
 
 const PORT = 8081;
 
 const app = express();
+
+const session = require('express-session');
+
+app.use(session({
+    secret: require('randomstring').generate(16),
+    resave: false,
+    saveUninitialized: false
+}))
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({ extended: true }));
+
+const SimpleAuth = require('./auth');
+const basicAuth = new SimpleAuth(app);
+console.log('Login with password', basicAuth.password);
+fs.writeFileSync('/tmp/cat-webpanel-password', basicAuth.password);
 
 const cc = new CathookConsole();
 
@@ -20,7 +35,7 @@ cc.once('init', () => {
 });
 cc.on('exit', () => {});
 
-app.post('/direct/:command', function(req, res) {
+app.post('/api/direct/:command', function(req, res) {
     cc.command(req.params.command, req.body, function(data) {
         res.send(data);
     });
