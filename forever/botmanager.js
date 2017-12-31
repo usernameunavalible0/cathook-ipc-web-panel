@@ -4,7 +4,7 @@ const fs = require('fs');
 const Bot = require('./bot');
 
 const users = new passwd.Passwd();
-const USERNAMES = 'kisak-';
+const USERNAMES = require('fs').readFileSync('../kisak').toString() + '-';
 
 class BotManager {
     constructor(cc) {
