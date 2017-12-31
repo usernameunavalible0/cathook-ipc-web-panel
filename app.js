@@ -15,7 +15,7 @@ try
 }
 catch (error)
 {
-    console.log(`Account generator already running?`);
+    console.log(`Webpanel already running?`);
     process.exit(1);
 }
 

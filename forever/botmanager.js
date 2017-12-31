@@ -17,6 +17,7 @@ class BotManager {
         this.quota = 0;
         this.lastQuery = {};
         this.updateTimeout = setTimeout(this.update.bind(this), 1000);
+        console.log(`Base account name: ${USERNAMES}`);
     }
     update() {
         var self = this;
