@@ -7,6 +7,18 @@ const fs = require('fs');
 
 const PORT = 8081;
 
+const npid = require('npid');
+try
+{
+    const pid = npid.create('/tmp/ncat-cathook-webpanel.pid', true);
+    pid.removeOnExit();
+}
+catch (error)
+{
+    console.log(`Webpanel already running?`);
+    process.exit(1);
+}
+
 const app = express();
 
 const session = require('express-session');
