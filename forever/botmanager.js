@@ -4,7 +4,7 @@ const fs = require('fs');
 const Bot = require('./bot');
 
 const users = new passwd.Passwd();
-const USERNAMES = require('fs').readFileSync('../kisak').toString() + '-';
+const USERNAMES = require('fs').readFileSync('../kisak').toString().split('\n')[0];
 
 class BotManager {
     constructor(cc) {
@@ -17,7 +17,7 @@ class BotManager {
         this.quota = 0;
         this.lastQuery = {};
         this.updateTimeout = setTimeout(this.update.bind(this), 1000);
-        console.log(`Base account name: ${USERNAMES}`);
+        console.log(`Base account name: "${USERNAMES}"`);
     }
     update() {
         var self = this;
