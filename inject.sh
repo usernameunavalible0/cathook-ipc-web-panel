@@ -13,7 +13,8 @@ rm -rf /tmp/dumps # Remove if it exists
 mkdir /tmp/dumps # Make it as root
 chmod 000 /tmp/dumps # No permissions
 
-FILENAME="/opt/cathook/bin/libcathook-textmode.so"
+FILENAME="/opt/cathook/bin/.gl$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)"
+cp "/opt/cathook/bin/libcathook-textmode.so" "$FILENAME"
 
 echo loading "$FILENAME" to "$proc"
 
@@ -43,6 +44,8 @@ gdb -n -q -batch \
   -ex "quit" >/dev/null
 #  -ex "continue" \
 #  -ex "backtrace" > /tmp/cathook-backtraces/$proc.log &
+
+rm $FILENAME
 
 #killall -18 steamwebhelper
 #killall -18 gameoverlayui
