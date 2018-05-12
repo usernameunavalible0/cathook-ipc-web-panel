@@ -260,7 +260,7 @@ class Bot extends EventEmitter {
             return;
         }
         var pid = self.procGame.pid;
-        if (injectManager.injected(pid)) {
+        if (injectManager.injected(pid) && self.state != STATE.INJECTED) {
             self.log('Already injected!');
             return;
         }
@@ -275,7 +275,7 @@ class Bot extends EventEmitter {
             self.timeoutIPCState = setTimeout(function() {
                 if (!self.ipcState) {
                     self.log(`IPC data timed out! Failed to inject?`);
-                    self.restart();
+                    Inject();
                 }
             }, TIMEOUT_IPC_STATE);
         });
