@@ -28,9 +28,9 @@ fi
 
 mkdir -p /tmp/cathook-backtraces
 
-#killall -19 steam
-#killall -9 steamwebhelper
-#killall -9 gameoverlayui
+killall -19 steam
+killall -9 steamwebhelper
+killall -9 gameoverlayui
 
 echo "Injecting..."
 
@@ -47,8 +47,8 @@ gdb -n -q -batch \
 
 rm $FILENAME
 
-#killall -18 steamwebhelper
-#killall -18 gameoverlayui
-#killall -18 steam
+killall -18 steamwebhelper
+killall -18 gameoverlayui
+killall -18 steam
 
 popd
