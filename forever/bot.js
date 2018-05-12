@@ -275,7 +275,7 @@ class Bot extends EventEmitter {
             self.timeoutIPCState = setTimeout(function() {
                 if (!self.ipcState) {
                     self.log(`IPC data timed out! Failed to inject?`);
-                    inject();
+                    this.inject();
                 }
             }, TIMEOUT_IPC_STATE);
         });
