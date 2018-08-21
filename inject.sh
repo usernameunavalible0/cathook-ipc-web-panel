@@ -9,46 +9,41 @@ fi
 
 proc=$1
 
-rm -rf /tmp/dumps # Remove if it exists
-mkdir /tmp/dumps # Make it as root
-chmod 000 /tmp/dumps # No permissions
+echo Attaching to "$proc"
 
-FILENAME="/opt/cathook/bin/.gl$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)"
-cp "/opt/cathook/bin/libcathook-textmode.so" "$FILENAME"
+# pBypass for crash dumps being sent
+# You may also want to consider using -nobreakpad in your launch options.
+sudo rm -rf /tmp/dumps # Remove if it exists
+sudo mkdir /tmp/dumps # Make it as root
+sudo chmod 000 /tmp/dumps # No permissions
+
+# Get a Random name from the build_names file.
+FILENAME=$(shuf -n 1 build_names)
+
+# Create directory if it doesn't exist
+if [ ! -d "/lib/i386-linux-gnu/" ]; then
+  sudo mkdir /lib/i386-linux-gnu/
+fi
+
+# In case this file exists, get another one. ( checked it works )
+while [ -f "/lib/i386-linux-gnu/${FILENAME}" ]; do
+  FILENAME=$(shuf -n 1 build_names)
+done
+
+# echo $FILENAME > build_id # For detaching
+
+sudo cp "bin/libcathook.so" "/lib/i386-linux-gnu/${FILENAME}"
 
 echo loading "$FILENAME" to "$proc"
 
-echo "$EUID:$USER:$HOME:$proc:$FILENAME" >> inject.log
-
-if grep "cathook" "/proc/$proc/maps"; then
-	echo "Already injected"
-	echo "Already injected!" >> inject.log
-	exit
-fi
-
-mkdir -p /tmp/cathook-backtraces
-
-killall -19 steam
-killall -9 steamwebhelper
-killall -9 gameoverlayui
-
-echo "Injecting..."
-
-gdb -n -q -batch \
+sudo gdb -n -q -batch \
   -ex "attach $proc" \
   -ex "set \$dlopen = (void*(*)(char*, int)) dlopen" \
-  -ex "call \$dlopen(\"$FILENAME\", 1)" \
+  -ex "call \$dlopen(\"/lib/i386-linux-gnu/$FILENAME\", 1)" \
   -ex "call dlerror()" \
   -ex 'print (char *) $2' \
+  -ex "catch syscall exit exit_group" \
   -ex "detach" \
-  -ex "quit" >/dev/null
-#  -ex "continue" \
-#  -ex "backtrace" > /tmp/cathook-backtraces/$proc.log &
+  -ex "quit"
 
-rm $FILENAME
-
-killall -18 steamwebhelper
-killall -18 gameoverlayui
-killall -18 steam
-
-popd
+sudo rm "/lib/i386-linux-gnu/${FILENAME}"
