@@ -13,7 +13,7 @@ const injectManager = require('./injection');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -textmode -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad";
-//const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid";
+//const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
 const TIMEOUT_START_GAME = 30000;
@@ -54,8 +54,8 @@ class Bot extends EventEmitter {
 
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
-        this.procSteam  = null;
-        this.procGame   = null;
+        this.procSteam = null;
+        this.procGame = null;
         this.procInject = null;
 
         this.ipcState = null;
@@ -85,14 +85,14 @@ class Bot extends EventEmitter {
             }
         }
 
-        this.on('inject', function() {
+        this.on('inject', function () {
             self.state = STATE.RUNNING;
         });
-        this.on('inject-error', function() {
+        this.on('inject-error', function () {
             self.state = STATE.RESTARTING;
             self.restartGame();
         });
-        this.on('ipc-data', function(obj) {
+        this.on('ipc-data', function (obj) {
             var id = obj.id;
             var data = obj.data;
             self.ipcID = id;
@@ -108,10 +108,10 @@ class Bot extends EventEmitter {
     }
     startSteamAndGame() {
         var self = this;
-        steamStartQueue.push(function() {
+        steamStartQueue.push(function () {
             self.spawnSteam();
             self.state = STATE.STARTING;
-            self.timeoutGameStart = setTimeout(function() {
+            self.timeoutGameStart = setTimeout(function () {
                 gameStartQueue.push(self.spawnGame.bind(self));
             }, TIMEOUT_START_GAME);
         });
@@ -134,6 +134,8 @@ class Bot extends EventEmitter {
         self.emit('start-steam', self.procSteam.pid);
     }
     killSteam() {
+        if (this.state == STATE.PREPARING)
+            return;
         this.log('Killing steam');
         let cp = child_process.spawn('/usr/bin/killall', ['steam', '-9'], this.spawnOptions);
     }
@@ -185,6 +187,8 @@ class Bot extends EventEmitter {
         delete self.procGame;
     }
     stop() {
+        if (this.state == STATE.PREPARING)
+            return;
         var self = this;
         self.stopped = true;
         self.log('Stopping...');
@@ -202,6 +206,8 @@ class Bot extends EventEmitter {
         console.log(`[${timestamp('HH:mm:ss')}][${this.name}][${this.state}] ${message}`);
     }
     kill(force) {
+        if (this.state == STATE.PREPARING)
+            return;
         var self = this;
         self.log('Killing all steam/game processes...');
         // Steam startup script doesn't really obey signals
@@ -209,45 +215,47 @@ class Bot extends EventEmitter {
         self.killGame();
     }
     killGame() {
+        if (this.state == STATE.PREPARING)
+            return;
         this.log('Killing game');
         let cp = child_process.spawn('/usr/bin/killall', ['hl2_linux', '-9'], this.spawnOptions);
-        cp.on('error', () => {});
+        cp.on('error', () => { });
     }
     restart() {
         var self = this;
-
-        if (self.state == STATE.PREPARING) return;
-        self.state = STATE.PREPARING;
-        self.log('Preparing to restart with new account...');
-        if (self.state == STATE.RESTARTING) {
-            self.log('Duplicate restart?');
-        }
-        if (self.account && !config.nodiscard) {
-            self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
-        }
-        self.kill();
-        clearTimeout(self.timeoutSteamRestart);
-        clearTimeout(self.timeoutGameStart);
-        clearTimeout(self.timeoutInjection);
-        clearTimeout(self.timeoutIPCState);
-        self.state = STATE.RESTARTING;
-        if (config.nodiscard && self.account)
-        {
-            self.startSteamAndGame();
-        }
-        else
-        {
-            accounts.get(function(err, acc) {
-                if (err) {
-                    self.state = STATE.WAITING_ACCOUNT;
-                    setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
-                    self.log('Error while getting account!');
-                    return;
-                }
-                self.account = acc;
+        self.stop();
+        setTimeout(() => {
+            if (self.state == STATE.PREPARING) return;
+            self.state = STATE.PREPARING;
+            self.log('Preparing to restart with new account...');
+            if (self.state == STATE.RESTARTING) {
+                self.log('Duplicate restart?');
+            }
+            if (self.account && !config.nodiscard) {
+                self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
+            }
+            self.kill();
+            clearTimeout(self.timeoutSteamRestart);
+            clearTimeout(self.timeoutGameStart);
+            clearTimeout(self.timeoutInjection);
+            clearTimeout(self.timeoutIPCState);
+            self.state = STATE.RESTARTING;
+            if (config.nodiscard && self.account) {
                 self.startSteamAndGame();
-            });
-        }
+            }
+            else {
+                accounts.get(function (err, acc) {
+                    if (err) {
+                        self.state = STATE.WAITING_ACCOUNT;
+                        setTimeout(self.restart.bind(self), TIMEOUT_RETRY_ACCOUNT);
+                        self.log('Error while getting account!');
+                        return;
+                    }
+                    self.account = acc;
+                    self.startSteamAndGame();
+                });
+            }
+        }, 1000);
     }
     inject() {
         var self = this;
@@ -267,12 +275,12 @@ class Bot extends EventEmitter {
 
         self.state = STATE.INJECTING;
 
-        injectQueue.push(function() {
+        injectQueue.push(function () {
             self.log(`Injecting into ${pid}`);
             self.ipcState = null;
             self.procInject = child_process.spawn('/bin/bash', ['inject.sh', `${parseInt(pid)}`], { uid: 0, gid: 0 });
             self.state = STATE.INJECTED;
-            self.timeoutIPCState = setTimeout(function() {
+            self.timeoutIPCState = setTimeout(function () {
                 if (!self.ipcState) {
                     self.log(`IPC data timed out! Failed to inject?`);
                     self.inject();
