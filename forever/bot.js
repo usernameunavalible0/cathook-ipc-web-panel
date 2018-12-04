@@ -87,6 +87,7 @@ class Bot extends EventEmitter {
 
         this.on('inject', function () {
             self.state = STATE.RUNNING;
+            self.stopped = false;
         });
         this.on('inject-error', function () {
             self.state = STATE.RESTARTING;
@@ -101,6 +102,7 @@ class Bot extends EventEmitter {
             }
             self.ipcState = data;
             self.state = STATE.RUNNING;
+            
         });
 
         this.kill();
