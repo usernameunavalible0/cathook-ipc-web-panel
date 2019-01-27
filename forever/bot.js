@@ -19,7 +19,7 @@ const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 const TIMEOUT_START_GAME = 30000;
 const TIMEOUT_INJECT_LIBRARY = 45000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
-const TIMEOUT_IPC_STATE = 15000;
+const TIMEOUT_IPC_STATE = 30000;
 const TIMEOUT_RESTART = 10000;
 
 const steamStartQueue = new ExecQueue(5000);
@@ -102,7 +102,7 @@ class Bot extends EventEmitter {
             }
             self.ipcState = data;
             self.state = STATE.RUNNING;
-            
+
         });
 
         this.kill();
@@ -145,31 +145,34 @@ class Bot extends EventEmitter {
         var self = this;
         if (self.procGame) {
             self.log('[ERROR] Game is already running!');
+            self.stopped = false;
             return;
         }
-        var res = procevt.find('hl2_linux', self.user.uid);
-        if (!res.length) {
-            self.log('[ERROR] Could not find running game!');
-            if (!self.stopped)
+        setTimeout(function () {
+            var res = procevt.find('hl2_linux', self.user.uid);
+            if (!res.length) {
+                self.log('[ERROR] Could not find running game!');
                 self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
-            return;
-        }
-        self.procGame = res[0];//child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
-        self.gameStarted = Date.now();
-        //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-        //self.procGame.stdout.pipe(self.logGame);
-        //self.procGame.stderr.pipe(self.logGame);
-        self.procGame.on('exit', self.handleGameExit.bind(self));
+                return;
+            }
+            self.stopped = false;
+            self.procGame = res[0];//child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
+            self.gameStarted = Date.now();
+            //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
+            //self.procGame.stdout.pipe(self.logGame);
+            //self.procGame.stderr.pipe(self.logGame);
+            self.procGame.on('exit', self.handleGameExit.bind(self));
 
-        clearTimeout(self.timeoutIPCState);
-        clearTimeout(self.timeoutInjection);
-        clearTimeout(self.timeoutGameStart);
+            clearTimeout(self.timeoutIPCState);
+            clearTimeout(self.timeoutInjection);
+            clearTimeout(self.timeoutGameStart);
 
-        self.state = STATE.WAITING_INJECT
-        self.timeoutInjection = setTimeout(self.inject.bind(self), TIMEOUT_INJECT_LIBRARY);
+            self.state = STATE.WAITING_INJECT
+            self.timeoutInjection = setTimeout(self.inject.bind(self), TIMEOUT_INJECT_LIBRARY);
 
-        self.log(`Found game (${self.procGame.pid})`);
-        self.emit('start-game', self.procGame.pid);
+            self.log(`Found game (${self.procGame.pid})`);
+            self.emit('start-game', self.procGame.pid);
+        }, 5000);
     }
     handleSteamExit(code, signal) {
         var self = this;
@@ -285,7 +288,7 @@ class Bot extends EventEmitter {
             self.timeoutIPCState = setTimeout(function () {
                 if (!self.ipcState) {
                     self.log(`IPC data timed out! Failed to inject?`);
-                    self.inject();
+                    self.restart();
                 }
             }, TIMEOUT_IPC_STATE);
         });

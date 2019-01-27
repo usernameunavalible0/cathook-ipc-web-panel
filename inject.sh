@@ -47,6 +47,3 @@ sudo gdb -n -q -batch \
   -ex "quit"
 
 sudo rm "/lib/i386-linux-gnu/${FILENAME}"
-
-sleep 5;
-sudo killall -9 gdb;
