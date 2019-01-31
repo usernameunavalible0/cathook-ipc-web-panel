@@ -172,7 +172,7 @@ class Bot extends EventEmitter {
 
             self.log(`Found game (${self.procGame.pid})`);
             self.emit('start-game', self.procGame.pid);
-        }, 5000);
+        }, 30000);
     }
     handleSteamExit(code, signal) {
         var self = this;
