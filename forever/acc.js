@@ -3,20 +3,14 @@ const fs = require('fs');
 
 module.exports = {
     get: function get(callback) {
-        let apikey = null;
-        try
-        {
-            apikey = fs.readFileSync('/tmp/accgen2-apikey').toString();
-        }
-        catch (err)
-        {
-            callback(err);
-        }
-        request('http://localhost:8080/api/cg/pop?key=' + apikey, function(e, r, b) {
+        request('https://accgen.inkcat.net:6969/account', function(e, r, b) {
             if (e)
+            {
+                console.log("You have been ratelimited from the Account Generator, contact t.me/nullworks on telegram to be unbanned or wait a day.");
                 return callback(e);
+            }
             try {
-                callback(null, JSON.parse(b).account);
+                callback(null, JSON.parse(b));
             } catch (e) {
                 return callback(e);
             }
