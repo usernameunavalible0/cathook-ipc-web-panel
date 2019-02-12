@@ -26,7 +26,7 @@
     "jquery": "^3.2.1",
     "npid": "^0.4.0",
     "randomstring": "^1.1.5",
-    "request": "^2.81.0",
+    "request": "^2.88.0",
     "sudo": "^1.0.3",
     "time-stamp": "^2.0.0",
     "underscore": "^1.8.3"
