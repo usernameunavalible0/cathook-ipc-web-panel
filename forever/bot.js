@@ -132,7 +132,7 @@ class Bot extends EventEmitter {
         self.procSteam.stdout.pipe(self.logSteam);
         self.procSteam.stderr.pipe(self.logSteam);
         self.procSteam.on('exit', self.handleSteamExit.bind(self));
-        self.log(`Launched Steam (${self.procSteam.pid}) as ${self.account.steamID}`);
+        self.log(`Launched Steam (${self.procSteam.pid}) as ${self.account.steamID || self.account.steamid}`);
         self.emit('start-steam', self.procSteam.pid);
     }
     killSteam() {
@@ -237,7 +237,7 @@ class Bot extends EventEmitter {
                 self.log('Duplicate restart?');
             }
             if (self.account && !config.nodiscard) {
-                self.log(`Discarding account ${self.account.login} (${self.account.steamID})`);
+                self.log(`Discarding account ${self.account.login} (${self.account.steamID || self.account.steamid})`);
             }
             self.kill();
             clearTimeout(self.timeoutSteamRestart);
