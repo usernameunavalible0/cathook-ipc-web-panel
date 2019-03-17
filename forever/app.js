@@ -62,7 +62,7 @@ module.exports = function(app, cc) {
 		for (var i of manager.bots) {
 			result.bots[i.name] = {
 				ipc: i.ipcState,
-                steamID: i.account ? i.account.steamID : 0,
+                steamID: i.account ? (i.account.steamID || i.account.steamid) : 0,
                 restarts: i.restarts,
 				ipcID: i.ipcID,
 				state: i.state,

@@ -229,7 +229,7 @@ class Bot extends EventEmitter {
     restart() {
         var self = this;
         self.stop();
-        setTimeout(() => {
+        self.timeoutGameStart = setTimeout(() => {
             if (self.state == STATE.PREPARING) return;
             self.state = STATE.PREPARING;
             self.log('Preparing to restart with new account...');
