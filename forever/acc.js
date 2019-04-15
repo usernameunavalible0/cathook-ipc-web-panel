@@ -36,9 +36,9 @@ module.exports = {
             return accgen(callback);
         }
         else {
-            request('https://catbot.club:2053/api/v1/account/' + apikey, function (e, r, b) {
+            request('https://accgen.cathook.club/api/v1/account/' + apikey, function (e, r, b) {
                 if (e || JSON.parse(b).error) {
-                    console.log("You have been rate limited");
+                    console.log("Error getting account (Check your api key)");
                     return callback(e || JSON.parse(b).error);
                 }
                 try {
