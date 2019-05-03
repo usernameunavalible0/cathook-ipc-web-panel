@@ -4,3 +4,5 @@ forever/node_modules*
 inject.log
 core
 logs/
+
+apikey
