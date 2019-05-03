@@ -2,7 +2,7 @@
 
 # THIS IS NOT USED
 
-# ./hl2_linux -game tf -steam -sw -h 1280 -w 720 -novid -nojoy -nosound -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad
+# ./hl2_linux -game tf -steam -sw -h 1280 -w 720 -noverifyfiles -novid -nojoy -nosound -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad
 
 STEAM="$HOME/.local/share/Steam"
 

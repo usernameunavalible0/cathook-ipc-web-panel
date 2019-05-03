@@ -37,14 +37,22 @@ module.exports = {
         }
         else {
             request('https://accgen.cathook.club/api/v1/account/' + apikey, function (e, r, b) {
-                if (e || JSON.parse(b).error) {
-                    console.log("Error getting account (Check your api key)");
-                    return callback(e || JSON.parse(b).error);
+                try
+                {
+                    if (e || JSON.parse(b).error) {
+                        console.log("Error getting account (Check your api key)");
+                        return callback(e || JSON.parse(b).error);
+                    }
+                    try {
+                        callback(null, JSON.parse(b));
+                    } catch (e) {
+                        return callback(e);
+                    }
                 }
-                try {
-                    callback(null, JSON.parse(b));
-                } catch (e) {
-                    return callback(e);
+                catch
+                {
+                    console.log("Error getting Account");
+                    return {};
                 }
             });
         }
