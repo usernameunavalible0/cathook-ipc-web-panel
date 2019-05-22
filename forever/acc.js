@@ -49,7 +49,7 @@ module.exports = {
                         return callback(e);
                     }
                 }
-                catch
+                catch (e)
                 {
                     console.log("Error getting Account");
                     return {};
