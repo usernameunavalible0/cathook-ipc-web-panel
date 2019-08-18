@@ -81,7 +81,8 @@ class Bot extends EventEmitter {
             env: {
                 USER: self.user.name,
                 DISPLAY: process.env.DISPLAY,
-                HOME: this.user.home
+                HOME: this.user.home,
+                LD_PRELOAD: process.env.STEAM_LD_PRELOAD
             }
         }
 
