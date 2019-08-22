@@ -27,7 +27,6 @@ module.exports = {
         }
         catch (error) {
             console.log("Error Reading 'apikey' file next to app.js, using Account generator.")
-            console.error(error);
             apikey = "";
             return accgen(callback);
         }
