@@ -184,6 +184,10 @@ class Bot extends EventEmitter {
 
         self.procGame = child_process.spawn(`${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/hl2_linux`, LAUNCH_OPTIONS_GAME, spawnoptions);
         self.state = STATE.WAITING;
+        self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
+        self.procGame.stdout.pipe(self.logGame);
+        self.procGame.stderr.pipe(self.logGame);
+
         setTimeout(function () {
             fs.unlinkSync(`/tmp/${filename}`);
             var res = procevt.find('hl2_linux', self.user.uid);
@@ -195,9 +199,6 @@ class Bot extends EventEmitter {
             self.stopped = false;
             self.procGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
             self.gameStarted = Date.now();
-            //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-            //self.procGame.stdout.pipe(self.logGame);
-            //self.procGame.stderr.pipe(self.logGame);
             self.procGame.on('exit', self.handleGameExit.bind(self));
 
             clearTimeout(self.timeoutIPCState);
