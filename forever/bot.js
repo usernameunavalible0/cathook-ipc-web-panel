@@ -17,7 +17,7 @@ const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -noverifyfiles -no
 //const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
-const TIMEOUT_START_GAME = 5000; // 30000 original
+const TIMEOUT_START_GAME = 20000;
 const TIMEOUT_INJECT_LIBRARY = 45000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
 const TIMEOUT_IPC_STATE = 30000;
@@ -182,22 +182,7 @@ class Bot extends EventEmitter {
         spawnoptions.env.LD_PRELOAD = `/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}`;
         spawnoptions.cwd = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2`;
 
-        console.error(`${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/hl2_linux`)
         self.procGame = child_process.spawn(`${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/hl2_linux`, LAUNCH_OPTIONS_GAME, spawnoptions);
-
-        self.procGame.stdout.on('data', function (data) {
-            console.error('stdout: ' + data.toString());
-        });
-
-        self.procGame.stderr.on('data', function (data) {
-            console.error('stderr: ' + data.toString());
-        });
-
-        self.procGame.on('exit', function (code) {
-            console.error('child process exited with code ' + code.toString());
-        });
-
-        console.error(self.procGame.pid)
         self.state = STATE.WAITING;
         setTimeout(function () {
             fs.unlinkSync(`/tmp/${filename}`);
@@ -220,65 +205,14 @@ class Bot extends EventEmitter {
 
             self.log(`Found game (${self.procGame.pid})`);
             self.emit('start-game', self.procGame.pid);
-        }, 10000);
 
-        /*self.procGame = child_process.spawn('/bin/bash', [ "preload.sh", LAUNCH_OPTIONS_GAME ], self.spawnGameOptions);
-        process.stdout.on('data', function (chunk) {
-            if (isNaN(chunk))
-            {
-                self.log('[ERROR] Could not start game!');
-            }
-            self.procGame = chunk;
-            setTimeout(function () {
-                var res = procevt.find('hl2_linux', self.user.uid);
-                if (!res.length) {
-                    self.log('[ERROR] Could not find running game!');
-                    self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
-                    return;
+            self.timeoutIPCState = setTimeout(function () {
+                if (!self.ipcState) {
+                    self.log(`IPC data timed out! Failed to inject?`);
+                    self.restart();
                 }
-                self.stopped = false;
-                self.procGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
-                self.gameStarted = Date.now();
-                //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-                //self.procGame.stdout.pipe(self.logGame);
-                //self.procGame.stderr.pipe(self.logGame);
-                self.procGame.on('exit', self.handleGameExit.bind(self));
-    
-                clearTimeout(self.timeoutIPCState);
-                clearTimeout(self.timeoutGameStart);
-    
-                self.log(`Found game (${self.procGame.pid})`);
-                self.emit('start-game', self.procGame.pid);
-            }, 10000);
-        });*/
-
-        /*var self = this;
-        if (self.procGame) {
-            self.log('[ERROR] Game is already running!');
-            self.stopped = false;
-            return;
-        }
-        setTimeout(function () {
-            var res = procevt.find('hl2_linux', self.user.uid);
-            if (!res.length) {
-                self.log('[ERROR] Could not find running game!');
-                self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
-                return;
-            }
-            self.stopped = false;
-            self.procGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
-            self.gameStarted = Date.now();
-            //self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-            //self.procGame.stdout.pipe(self.logGame);
-            //self.procGame.stderr.pipe(self.logGame);
-            self.procGame.on('exit', self.handleGameExit.bind(self));
-
-            clearTimeout(self.timeoutIPCState);
-            clearTimeout(self.timeoutGameStart);
-
-            self.log(`Found game (${self.procGame.pid})`);
-            self.emit('start-game', self.procGame.pid);
-        }, 30000);*/
+            }, TIMEOUT_IPC_STATE);
+        }, 10000);
     }
     handleSteamExit(code, signal) {
         var self = this;
