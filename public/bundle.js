@@ -11166,7 +11166,7 @@ const $ = require('jquery');
 const format = require('format-duration');
 const request = require('browser-request');
 
-const STATE = 'INITIALIZING INITIALIZED PREPARING STARTING INJECTING WAITING RUNNING RESTARTING STOPPING ACCOUNT'.split(' ');
+const STATE = 'INITIALIZING INITIALIZED PREPARING STARTING WAITING RUNNING RESTARTING STOPPING ACCOUNT INJECTED'.split(' ');
 
 const classes = [
 	"Unknown", "Scout",
@@ -11338,16 +11338,16 @@ function updateIPCData(row, id, data) {
 function updateUserData(bot, data) {
 	var row = $(`tr[data-id="${bot}"]`);
 	if (!row.length) return;
-	row.toggleClass('stopped', data.state != 6);
+	row.toggleClass('stopped', data.state != 5);
 	row.find('.client-state').text(STATE[data.state]);
-	if (data.state == 6 && data.ipc) {
+	if (data.state == 5 && data.ipc) {
 		row.attr('data-pid', data.ipc.pid);
 		row.find('.client-pid').text(data.ipc.pid);
 		row.find('.client-uptime-total').text(format(Date.now() - data.started));
         row.find('.client-restarts').text(data.restarts);
         row.find('.client-steam').empty().append($('<a></a>').text('Profile').attr('href', `https://steamcommunity.com/profiles/${data.steamID || data.steamid}`).attr('target', '_blank'));
 	}
-	if (data.state != 6) {
+	if (data.state != 5) {
 		row.find('.active').text('N/A');
 	}
 	updateIPCData(row, data.ipcID, data.ipc);
