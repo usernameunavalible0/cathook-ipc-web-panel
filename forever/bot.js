@@ -5,6 +5,7 @@ const sudo = require('sudo');
 const timestamp = require('time-stamp');
 const _ = require('underscore');
 const fs = require('fs');
+const procfs = require('procfs-stats');
 
 const procevt = require('./procevt');
 const accounts = require('./acc.js');
@@ -12,15 +13,14 @@ const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_GAME = ["-game", "tf", "-silent", "-textmode", "-sw", "-h", "640", "-w", "480", "-novid", "-noverifyfiles", "-nojoy", "-nosound", "-noshaderapi", "-norebuildaudio", "-nomouse", "-nomessagebox", "-nominidumps", "-nohltv", "-nobreakpad", "-nobrowser", "-nofriendsui", "-nops2b", "-norebuildaudio", "-particles", "512", "-snoforceformat", "-softparticlesdefaultoff", "-threads", "1"];
-const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui";
+const LAUNCH_OPTIONS_GAME = "firejail --env=LD_PRELOAD=$LD_PRELOAD --env=LD_LIBRARY_PATH=$LD_LIBRARY_PATH --join=$JAILNAME $GAMEPATH -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1";
+const LAUNCH_OPTIONS_STEAM = `firejail --profile=/opt/cathook/steam.profile --name=$JAILNAME --netns=$NETNS --allusers --keep-dev-shm steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui`;
 //const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
 const TIMEOUT_START_GAME = 20000;
-const TIMEOUT_INJECT_LIBRARY = 45000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
-const TIMEOUT_IPC_STATE = 30000;
+const TIMEOUT_IPC_STATE = 45000;
 const TIMEOUT_RESTART = 10000;
 
 const steamStartQueue = new ExecQueue(5000);
@@ -66,8 +66,13 @@ class Bot extends EventEmitter {
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
         this.procSteam = null;
+        this.procFirejailGame = null;
         this.procGame = null;
+
         this.procInject = null;
+
+        // Start timestamp
+        this.startTime = null;
 
         this.ipcState = null;
         this.ipcID = -1;
@@ -94,7 +99,8 @@ class Bot extends EventEmitter {
                 HOME: this.user.home,
                 LD_LIBRARY_PATH: process.env.STEAM_LD_LIBRARY_PATH,
                 LD_PRELOAD: process.env.STEAM_LD_PRELOAD
-            }
+            },
+            shell: true
         }
 
         this.spawnGameOptions = {
@@ -105,7 +111,8 @@ class Bot extends EventEmitter {
                 USER: self.user.name,
                 DISPLAY: process.env.DISPLAY,
                 HOME: this.user.home
-            }
+            },
+            shell: true
         }
 
         this.on('inject', function () {
@@ -148,9 +155,11 @@ class Bot extends EventEmitter {
             self.log('[ERROR] Steam is already running!');
             return;
         }
-        self.procSteam = child_process.spawn('/usr/bin/steam', LAUNCH_OPTIONS_STEAM
-            .replace("$LOGIN", self.account.login)
-            .replace("$PASSWORD", self.account.password).split(' '), self.spawnSteamOptions);
+
+        var id = self.user.name.split("-")[1];
+
+        self.procSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM.replace("$LOGIN", self.account.login)
+            .replace("$PASSWORD", self.account.password).replace("$JAILNAME", self.user.name).replace("$NETNS", `ns${id}`), self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.procSteam.stdout.pipe(self.logSteam);
         self.procSteam.stderr.pipe(self.logSteam);
@@ -166,27 +175,28 @@ class Bot extends EventEmitter {
     }
     spawnGame() {
         var self = this;
-        if (self.procGame) {
+        if (self.procFirejailGame) {
             self.log('[ERROR] Game is already running!');
             self.stopped = false;
             return;
         }
 
-        /*sudo mkdir -p /tmp/dumps # Make it as root if it doesnt exist
-        sudo chown root:root /tmp/dumps # Claim it as root
-        sudo chmod 000 /tmp/dumps # No permissions*/
         var filename = `.gl${makeid(6)}`;
         fs.copyFileSync("/opt/cathook/bin/libcathook-textmode.so", `/tmp/${filename}`);
         var spawnoptions = JSON.parse(JSON.stringify(self.spawnGameOptions));
-        spawnoptions.env.LD_LIBRARY_PATH = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin`;
-        spawnoptions.env.LD_PRELOAD = `/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}`;
+        //spawnoptions.env.LD_LIBRARY_PATH = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin`;
+        //spawnoptions.env.LD_PRELOAD = `/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}`;
         spawnoptions.cwd = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2`;
 
-        self.procGame = child_process.spawn(`${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/hl2_linux`, LAUNCH_OPTIONS_GAME, spawnoptions);
+        self.procFirejailGame = child_process.spawn(LAUNCH_OPTIONS_GAME.replace("$GAMEPATH", `${self.user.home}/.steam/steam/steamapps/common/Team\\ Fortress\\ 2/hl2_linux`)
+            .replace("$JAILNAME", self.user.name)
+            .replace("$LD_PRELOAD", `"/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}"`)
+            .replace("$LD_LIBRARY_PATH", `"${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin"`),
+            [], spawnoptions);
         self.state = STATE.WAITING;
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
-        self.procGame.stdout.pipe(self.logGame);
-        self.procGame.stderr.pipe(self.logGame);
+        self.procFirejailGame.stdout.pipe(self.logGame);
+        self.procFirejailGame.stderr.pipe(self.logGame);
 
         setTimeout(function () {
             fs.unlinkSync(`/tmp/${filename}`);
@@ -196,16 +206,25 @@ class Bot extends EventEmitter {
                 self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
                 return;
             }
+            self.procGame = res[0];
+            procfs(self.procGame.pid).stat(function (err, ret) {
+                if (err) {
+                    self.log("Error while getting stat.");
+                } else {
+                    self.startTime = ret.starttime;
+                }
+            })
+
             self.stopped = false;
-            self.procGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
+            self.procFirejailGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
             self.gameStarted = Date.now();
-            self.procGame.on('exit', self.handleGameExit.bind(self));
+            self.procFirejailGame.on('exit', self.handleGameExit.bind(self));
 
             clearTimeout(self.timeoutIPCState);
             clearTimeout(self.timeoutGameStart);
 
-            self.log(`Found game (${self.procGame.pid})`);
-            self.emit('start-game', self.procGame.pid);
+            self.log(`Found game (${self.procFirejailGame.pid})`);
+            self.emit('start-game', self.procFirejailGame.pid);
 
             self.timeoutIPCState = setTimeout(function () {
                 if (!self.ipcState) {
@@ -225,12 +244,12 @@ class Bot extends EventEmitter {
     }
     handleGameExit(code, signal) {
         var self = this;
-        self.log(`Game (${self.procGame.pid}) exited with code ${code}, signal ${signal}`);
+        self.log(`Game (${self.procFirejailGame.pid}) exited with code ${code}, signal ${signal}`);
         self.emit('exit-game');
         self.ipcState = null;
         if (self.procSteam)
             self.killSteam();
-        delete self.procGame;
+        delete self.procFirejailGame;
     }
     stop() {
         if (this.state == STATE.PREPARING)
