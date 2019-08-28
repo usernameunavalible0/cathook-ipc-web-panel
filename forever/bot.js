@@ -65,7 +65,7 @@ class Bot extends EventEmitter {
 
         this.log(`Initializing, user = ${user.name} (${user.uid})`);
 
-        this.procSteam = null;
+        this.procFirejailSteam = null;
         this.procFirejailGame = null;
         this.procGame = null;
 
@@ -124,6 +124,8 @@ class Bot extends EventEmitter {
             self.restartGame();
         });
         this.on('ipc-data', function (obj) {
+            if (self.state != STATE.RUNNING && self.state != STATE.WAITING)
+                return;
             var id = obj.id;
             var data = obj.data;
             self.ipcID = id;
@@ -132,7 +134,7 @@ class Bot extends EventEmitter {
             }
             self.ipcState = data;
             self.state = STATE.RUNNING;
-
+            self.log("Got ipc data!")
         });
 
         this.kill();
@@ -151,27 +153,29 @@ class Bot extends EventEmitter {
     spawnSteam() {
         var self = this;
         this.restarts++;
-        if (self.procSteam) {
+        if (self.procFirejailSteam) {
             self.log('[ERROR] Steam is already running!');
             return;
         }
 
         var id = self.user.name.split("-")[1];
 
-        self.procSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM.replace("$LOGIN", self.account.login)
+        self.procFirejailSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM.replace("$LOGIN", self.account.login)
             .replace("$PASSWORD", self.account.password).replace("$JAILNAME", self.user.name).replace("$NETNS", `ns${id}`), self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
-        self.procSteam.stdout.pipe(self.logSteam);
-        self.procSteam.stderr.pipe(self.logSteam);
-        self.procSteam.on('exit', self.handleSteamExit.bind(self));
-        self.log(`Launched Steam (${self.procSteam.pid}) as ${self.account.steamID || self.account.steamid}`);
-        self.emit('start-steam', self.procSteam.pid);
+        self.procFirejailSteam.stdout.pipe(self.logSteam);
+        self.procFirejailSteam.stderr.pipe(self.logSteam);
+        self.procFirejailSteam.on('exit', self.handleSteamExit.bind(self));
+        self.log(`Launched Steam (${self.procFirejailSteam.pid}) as ${self.account.steamID || self.account.steamid}`);
+        self.emit('start-steam', self.procFirejailSteam.pid);
     }
     killSteam() {
         if (this.state == STATE.PREPARING)
             return;
         this.log('Killing steam');
-        let cp = child_process.spawn('/usr/bin/killall', ['steam', '-9'], this.spawnSteamOptions);
+        // Firejail will handle smooth termination
+        if (this.procFirejailSteam)
+            this.procFirejailSteam.kill("SIGINT");
     }
     spawnGame() {
         var self = this;
@@ -197,8 +201,9 @@ class Bot extends EventEmitter {
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
         self.procFirejailGame.stdout.pipe(self.logGame);
         self.procFirejailGame.stderr.pipe(self.logGame);
+        self.procFirejailGame.on('exit', self.handleGameExit.bind(self));
 
-        setTimeout(function () {
+        self.timeoutGameStart = setTimeout(function () {
             fs.unlinkSync(`/tmp/${filename}`);
             var res = procevt.find('hl2_linux', self.user.uid);
             if (!res.length) {
@@ -216,9 +221,7 @@ class Bot extends EventEmitter {
             })
 
             self.stopped = false;
-            self.procFirejailGame = res[0]; //child_process.spawn('bash', ['start.sh', self.account.login], self.spawnOptions);
             self.gameStarted = Date.now();
-            self.procFirejailGame.on('exit', self.handleGameExit.bind(self));
 
             clearTimeout(self.timeoutIPCState);
             clearTimeout(self.timeoutGameStart);
@@ -236,19 +239,20 @@ class Bot extends EventEmitter {
     }
     handleSteamExit(code, signal) {
         var self = this;
-        self.log(`Steam (${self.procSteam.pid}) exited with code ${code}, signal ${signal}`);
+        self.log(`Steam (${self.procFirejailSteam.pid}) exited with code ${code}, signal ${signal}`);
         if (!self.stopped)
             self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
         self.emit('exit-steam');
-        delete self.procSteam;
+        delete self.procFirejailSteam;
     }
     handleGameExit(code, signal) {
         var self = this;
         self.log(`Game (${self.procFirejailGame.pid}) exited with code ${code}, signal ${signal}`);
         self.emit('exit-game');
         self.ipcState = null;
-        if (self.procSteam)
+        if (self.procFirejailSteam)
             self.killSteam();
+        delete self.procGame;
         delete self.procFirejailGame;
     }
     stop() {
@@ -274,16 +278,16 @@ class Bot extends EventEmitter {
             return;
         var self = this;
         self.log('Killing all steam/game processes...');
-        // Steam startup script doesn't really obey signals
-        self.killSteam();
+        // Steam startup script doesn't really obey signals, but firejail does.
         self.killGame();
+        self.killSteam();
     }
     killGame() {
         if (this.state == STATE.PREPARING)
             return;
         this.log('Killing game');
-        let cp = child_process.spawn('/usr/bin/killall', ['hl2_linux', '-9'], this.spawnSteamOptions);
-        cp.on('error', () => {});
+        if (this.procFirejailGame)
+            this.procFirejailGame.kill("SIGINT");
     }
     restart() {
         var self = this;
