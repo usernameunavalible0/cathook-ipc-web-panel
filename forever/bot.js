@@ -134,7 +134,6 @@ class Bot extends EventEmitter {
             }
             self.ipcState = data;
             self.state = STATE.RUNNING;
-            self.log("Got ipc data!")
         });
 
         this.kill();
