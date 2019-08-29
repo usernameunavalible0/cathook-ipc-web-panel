@@ -20,7 +20,7 @@ const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
 const TIMEOUT_START_GAME = 20000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
-const TIMEOUT_IPC_STATE = 45000;
+const TIMEOUT_IPC_STATE = 90000;
 const TIMEOUT_RESTART = 10000;
 
 const steamStartQueue = new ExecQueue(5000);
