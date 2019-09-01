@@ -13,8 +13,8 @@ const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_GAME = "firejail --env=LD_PRELOAD=$LD_PRELOAD --env=LD_LIBRARY_PATH=$LD_LIBRARY_PATH --join=$JAILNAME $GAMEPATH -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1";
-const LAUNCH_OPTIONS_STEAM = `firejail --profile=/opt/cathook/steam.profile --name=$JAILNAME --netns=$NETNS --allusers --keep-dev-shm steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui`;
+const LAUNCH_OPTIONS_GAME = 'firejail --join=$JAILNAME su --whitelist-environment="DISPLAY" - $USER -c \'cd $GAMEPATH && pwd && LD_LIBRARY_PATH=$LD_LIBRARY_PATH LD_PRELOAD=$LD_PRELOAD ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
+const LAUNCH_OPTIONS_STEAM = `firejail --noprofile --name=$JAILNAME --netns=$NETNS --allusers su --whitelist-environment="DISPLAY" - $USER -- steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui`;
 //const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
@@ -90,27 +90,15 @@ class Bot extends EventEmitter {
 
         // :/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu/mesa-egl:/usr/lib/i386-linux-gnu/mesa:/usr/local/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/mesa-egl:/usr/lib/x86_64-linux-gnu/mesa:/lib32:/usr/lib32:/libx32:/usr/libx32:/lib:/usr/lib:/usr/lib/i386-linux-gnu/sse2:/usr/lib/i386-linux-gnu/tls:/usr/lib/x86_64-linux-gnu/tls
         this.spawnSteamOptions = {
-            uid: parseInt(self.user.uid),
-            gid: parseInt(self.user.gid),
-            cwd: GAME_CWD,
             env: {
-                USER: self.user.name,
                 DISPLAY: process.env.DISPLAY,
-                HOME: this.user.home,
-                LD_LIBRARY_PATH: process.env.STEAM_LD_LIBRARY_PATH,
-                LD_PRELOAD: process.env.STEAM_LD_PRELOAD
             },
             shell: true
         }
 
         this.spawnGameOptions = {
-            uid: parseInt(self.user.uid),
-            gid: parseInt(self.user.gid),
-            cwd: GAME_CWD,
             env: {
-                USER: self.user.name,
                 DISPLAY: process.env.DISPLAY,
-                HOME: this.user.home
             },
             shell: true
         }
@@ -159,8 +147,13 @@ class Bot extends EventEmitter {
 
         var id = self.user.name.split("-")[1];
 
-        self.procFirejailSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM.replace("$LOGIN", self.account.login)
-            .replace("$PASSWORD", self.account.password).replace("$JAILNAME", self.user.name).replace("$NETNS", `ns${id}`), self.spawnSteamOptions);
+        self.procFirejailSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM
+            .replace("$LOGIN", self.account.login)
+            .replace("$PASSWORD", self.account.password)
+            .replace("$JAILNAME", self.user.name)
+            .replace("$USER", self.user.name)
+            .replace("$NETNS", `ns${id}`),
+             self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.procFirejailSteam.stdout.pipe(self.logSteam);
         self.procFirejailSteam.stderr.pipe(self.logSteam);
@@ -187,13 +180,12 @@ class Bot extends EventEmitter {
         var filename = `.gl${makeid(6)}`;
         fs.copyFileSync("/opt/cathook/bin/libcathook-textmode.so", `/tmp/${filename}`);
         var spawnoptions = JSON.parse(JSON.stringify(self.spawnGameOptions));
-        //spawnoptions.env.LD_LIBRARY_PATH = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin`;
-        //spawnoptions.env.LD_PRELOAD = `/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}`;
         spawnoptions.cwd = `${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2`;
 
-        self.procFirejailGame = child_process.spawn(LAUNCH_OPTIONS_GAME.replace("$GAMEPATH", `${self.user.home}/.steam/steam/steamapps/common/Team\\ Fortress\\ 2/hl2_linux`)
+        self.procFirejailGame = child_process.spawn(LAUNCH_OPTIONS_GAME.replace("$GAMEPATH", `${self.user.home}/.steam/steam/steamapps/common/Team\\ Fortress\\ 2/`)
             .replace("$JAILNAME", self.user.name)
-            .replace("$LD_PRELOAD", `"/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}"`)
+            .replace("$LD_PRELOAD", `"/tmp/${filename}"`)
+            .replace("$USER", self.user.name)
             .replace("$LD_LIBRARY_PATH", `"${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin"`),
             [], spawnoptions);
         self.state = STATE.WAITING;
