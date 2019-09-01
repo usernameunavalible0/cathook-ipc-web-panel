@@ -14,7 +14,7 @@ const injectManager = require('./injection');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_GAME = 'firejail --join=$JAILNAME su --whitelist-environment="DISPLAY" - $USER -c \'cd $GAMEPATH && LD_LIBRARY_PATH=$LD_LIBRARY_PATH LD_PRELOAD=$LD_PRELOAD ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
-const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --name=$JAILNAME --netns=$NETNS --allusers su --whitelist-environment="DISPLAY" - $USER -c \'LD_PRELOAD=$LD_PRELOAD steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
+const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --blacklist=$STEAMWEBHELPERPATH --name=$JAILNAME --netns=$NETNS --allusers su --whitelist-environment="DISPLAY" - $USER -c \'LD_PRELOAD=$LD_PRELOAD steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
 //const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
@@ -152,6 +152,7 @@ class Bot extends EventEmitter {
             .replace("$PASSWORD", self.account.password)
             .replace("$JAILNAME", self.user.name)
             .replace("$USER", self.user.name)
+            .replace("$STEAMWEBHELPERPATH", `/home/${self.user.name}/.local/share/Steam/ubuntu12_64/steamwebhelper.sh`)
             .replace("$LD_PRELOAD", `"${process.env.STEAM_LD_PRELOAD}"`)
             .replace("$NETNS", `ns${id}`),
              self.spawnSteamOptions);
