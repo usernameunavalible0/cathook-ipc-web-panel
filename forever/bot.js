@@ -13,8 +13,8 @@ const ExecQueue = require('./execqueue');
 const injectManager = require('./injection');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_GAME = 'firejail --join=$JAILNAME su --whitelist-environment="DISPLAY" - $USER -c \'cd $GAMEPATH && pwd && LD_LIBRARY_PATH=$LD_LIBRARY_PATH LD_PRELOAD=$LD_PRELOAD ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
-const LAUNCH_OPTIONS_STEAM = `firejail --noprofile --name=$JAILNAME --netns=$NETNS --allusers su --whitelist-environment="DISPLAY" - $USER -- steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui`;
+const LAUNCH_OPTIONS_GAME = 'firejail --join=$JAILNAME su --whitelist-environment="DISPLAY" - $USER -c \'cd $GAMEPATH && LD_LIBRARY_PATH=$LD_LIBRARY_PATH LD_PRELOAD=$LD_PRELOAD ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
+const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --name=$JAILNAME --netns=$NETNS --allusers su --whitelist-environment="DISPLAY" - $USER -c \'LD_PRELOAD=$LD_PRELOAD steam -silent -login $LOGIN $PASSWORD -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
 //const LAUNCH_OPTIONS_STEAM = "-silent -login $LOGIN $PASSWORD -applaunch 440 -sw -h 480 -w 640 -novid -noverifyfiles";
 const GAME_CWD = "/opt/steamapps/common/Team Fortress 2"
 
@@ -152,6 +152,7 @@ class Bot extends EventEmitter {
             .replace("$PASSWORD", self.account.password)
             .replace("$JAILNAME", self.user.name)
             .replace("$USER", self.user.name)
+            .replace("$LD_PRELOAD", `"${process.env.STEAM_LD_PRELOAD}"`)
             .replace("$NETNS", `ns${id}`),
              self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
@@ -184,7 +185,7 @@ class Bot extends EventEmitter {
 
         self.procFirejailGame = child_process.spawn(LAUNCH_OPTIONS_GAME.replace("$GAMEPATH", `${self.user.home}/.steam/steam/steamapps/common/Team\\ Fortress\\ 2/`)
             .replace("$JAILNAME", self.user.name)
-            .replace("$LD_PRELOAD", `"/tmp/${filename}"`)
+            .replace("$LD_PRELOAD", `"/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}"`)
             .replace("$USER", self.user.name)
             .replace("$LD_LIBRARY_PATH", `"${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin"`),
             [], spawnoptions);
