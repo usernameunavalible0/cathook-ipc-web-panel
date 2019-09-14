@@ -157,6 +157,7 @@ class Bot extends EventEmitter {
             .replace("$NETNS", `ns${id}`),
              self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
+        self.logSteam.on('error', (err) => {self.log(`error on logSteam pipe: ${err}`)});
         self.procFirejailSteam.stdout.pipe(self.logSteam);
         self.procFirejailSteam.stderr.pipe(self.logSteam);
         self.procFirejailSteam.on('exit', self.handleSteamExit.bind(self));
@@ -192,6 +193,7 @@ class Bot extends EventEmitter {
             [], spawnoptions);
         self.state = STATE.WAITING;
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
+        self.logGame.on('error', (err) => {self.log(`error on logGame pipe: ${err}`)});
         self.procFirejailGame.stdout.pipe(self.logGame);
         self.procFirejailGame.stderr.pipe(self.logGame);
         self.procFirejailGame.on('exit', self.handleGameExit.bind(self));
