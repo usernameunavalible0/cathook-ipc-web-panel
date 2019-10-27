@@ -86,7 +86,12 @@ class Bot extends EventEmitter {
         this.logSteam = null;
         this.logGame = null;
 
-        var steampath = this.user.home + '/.local/share/Steam';
+        this.STEAM_NATIVE_RUNTIME = fs.existsSync("/usr/lib/steam/native_runtime.txt") || !fs.existsSync(`${this.user.home}/.local/share/Steam/ubuntu12_32/steam-runtime`) 
+
+        // Dynamically determine LD_LIBRARY_PATH with steam-runtime
+        this.LD_LIBRARY_PATH = `${this.STEAM_NATIVE_RUNTIME ? "" : child_process.execSync("./run.sh printenv LD_LIBRARY_PATH", {
+            cwd: `${this.user.home}/.local/share/Steam/ubuntu12_32/steam-runtime`
+        }).toString().replace(/(\r\n|\n|\r)/gm, "")}"${this.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin"`
 
         // :/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu/mesa-egl:/usr/lib/i386-linux-gnu/mesa:/usr/local/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/mesa-egl:/usr/lib/x86_64-linux-gnu/mesa:/lib32:/usr/lib32:/libx32:/usr/libx32:/lib:/usr/lib:/usr/lib/i386-linux-gnu/sse2:/usr/lib/i386-linux-gnu/tls:/usr/lib/x86_64-linux-gnu/tls
         this.spawnSteamOptions = {
@@ -152,7 +157,7 @@ class Bot extends EventEmitter {
             .replace("$PASSWORD", self.account.password)
             .replace("$JAILNAME", self.user.name)
             .replace("$USER", self.user.name)
-            .replace("$STEAMWEBHELPERPATH", `/home/${self.user.name}/.local/share/Steam/ubuntu12_64/steamwebhelper.sh`)
+            .replace("$STEAMWEBHELPERPATH", `${self.user.home}/.local/share/Steam/ubuntu12_64/steamwebhelper.sh`)
             .replace("$LD_PRELOAD", `"${process.env.STEAM_LD_PRELOAD}"`)
             .replace("$NETNS", `ns${id}`),
              self.spawnSteamOptions);
@@ -189,7 +194,7 @@ class Bot extends EventEmitter {
             .replace("$JAILNAME", self.user.name)
             .replace("$LD_PRELOAD", `"/tmp/${filename}:${process.env.STEAM_LD_PRELOAD}"`)
             .replace("$USER", self.user.name)
-            .replace("$LD_LIBRARY_PATH", `"${self.user.home}/.steam/steam/steamapps/common/Team Fortress 2/bin"`),
+            .replace("$LD_LIBRARY_PATH", self.LD_LIBRARY_PATH),
             [], spawnoptions);
         self.state = STATE.WAITING;
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
