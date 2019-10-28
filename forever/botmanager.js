@@ -11,7 +11,7 @@ class BotManager {
         var self = this;
         try {
             fs.mkdirSync('logs');
-        } catch(e) {}
+        } catch (e) {}
         this.bots = [];
         this.cc = cc;
         this.quota = 0;
@@ -21,12 +21,12 @@ class BotManager {
     }
     update() {
         var self = this;
-        self.cc.command('query', {}, function(data) {
+        self.cc.command('query', {}, function (data) {
             self.updateTimeout = setTimeout(self.update.bind(self), 1000);
             self.lastQuery = data;
             for (var q in data.result) {
                 for (var b of self.bots) {
-                    if (b.procGame && b.procGame.pid == data.result[q].pid) {
+                    if (b.startTime && b.startTime == data.result[q].starttime) {
                         b.emit('ipc-data', {
                             id: q,
                             data: data.result[q]
