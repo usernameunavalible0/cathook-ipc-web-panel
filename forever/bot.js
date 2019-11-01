@@ -13,7 +13,7 @@ const ExecQueue = require('./execqueue');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% su - %USER% -c \'cd $GAMEPATH && LD_LIBRARY_PATH=%LD_LIBRARY_PATH% LD_PRELOAD=%LD_PRELOAD% DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
-const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --blacklist=%STEAMWEBHELPERPATH% --name=%JAILNAME% --netns=%NETNS% --allusers su - %USER% -c \'DISPLAY=%DISPLAY% LD_PRELOAD=%LD_PRELOAD% steam -silent -login %LOGIN% %PASSWORD% -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
+const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --blacklist=%STEAMWEBHELPERPATH% --name=%JAILNAME% --dns=1.1.1.1 --netns=%NETNS% --allusers su - %USER% -c \'DISPLAY=%DISPLAY% LD_PRELOAD=%LD_PRELOAD% steam -silent -login %LOGIN% %PASSWORD% -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
 
 const TIMEOUT_START_GAME = 20000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
@@ -83,7 +83,7 @@ class Bot extends EventEmitter {
 
         this.isGarbageDistro = !fs.existsSync(`${this.user.home}/.local/share/Steam/steam`);
         this.steamPath = this.isGarbageDistro ? `${this.user.home}/.steam` : `${this.user.home}/.local/share/Steam`
-        this.tf2Path = `${this.steamPath}/steamapps/common/Team Fortress 2`
+        this.tf2Path = this.isGarbageDistro ? `${this.steamPath}/steam/steamapps/common/Team Fortress 2` : `${this.steamPath}/steamapps/common/Team Fortress 2`
 
         this.steamNativeRuntime = fs.existsSync("/usr/lib/steam/native_runtime.txt") || !fs.existsSync(`${this.steamPath}/ubuntu12_32/steam-runtime`)
 
