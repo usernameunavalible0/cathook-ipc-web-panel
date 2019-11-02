@@ -94,11 +94,11 @@ class Bot extends EventEmitter {
 
         // :/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu/mesa-egl:/usr/lib/i386-linux-gnu/mesa:/usr/local/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/mesa-egl:/usr/lib/x86_64-linux-gnu/mesa:/lib32:/usr/lib32:/libx32:/usr/libx32:/lib:/usr/lib:/usr/lib/i386-linux-gnu/sse2:/usr/lib/i386-linux-gnu/tls:/usr/lib/x86_64-linux-gnu/tls
         this.spawnSteamOptions = {
-            shell: true
+            shell: 'bash'
         }
 
         this.spawnGameOptions = {
-            shell: true
+            shell: 'bash'
         }
         this.on('ipc-data', function (obj) {
             if (self.state != STATE.RUNNING && self.state != STATE.WAITING)
