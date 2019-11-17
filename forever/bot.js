@@ -12,8 +12,8 @@ const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% su - %USER% -c \'cd $GAMEPATH && LD_LIBRARY_PATH=%LD_LIBRARY_PATH% LD_PRELOAD=%LD_PRELOAD% DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -textmode -sw -h 640 -w 480 -novid -noverifyfiles -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -nobrowser -nofriendsui -nops2b -norebuildaudio -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
-const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --blacklist=%STEAMWEBHELPERPATH% --name=%JAILNAME% --dns=1.1.1.1 --netns=%NETNS% --allusers su - %USER% -c \'DISPLAY=%DISPLAY% LD_PRELOAD=%LD_PRELOAD% steam -silent -login %LOGIN% %PASSWORD% -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
+const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% su - %USER% -c \'cd $GAMEPATH && LD_LIBRARY_PATH=%LD_LIBRARY_PATH% LD_PRELOAD=%LD_PRELOAD% DISPLAY=:3239 ./hl2_linux -game tf -silent -sw -h 640 -w 480 -novid -nojoy -nosound -noshaderapi -norebuildaudio -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\'';
+const LAUNCH_OPTIONS_STEAM = 'firejail --noprofile --blacklist=%STEAMWEBHELPERPATH% --name=%JAILNAME% --dns=1.1.1.1 --netns=%NETNS% --allusers su - %USER% -c \'DISPLAY=:3239 LD_PRELOAD=%LD_PRELOAD% steam -silent -login %LOGIN% %PASSWORD% -noverifyfiles -nominidumps -nobreakpad -nobrowser -nofriendsui\'';
 
 const TIMEOUT_START_GAME = 20000;
 const TIMEOUT_RETRY_ACCOUNT = 30000;
@@ -152,9 +152,7 @@ class Bot extends EventEmitter {
             // LD_PRELOAD, "just disable vac"
             .replace("%LD_PRELOAD%", `"${process.env.STEAM_LD_PRELOAD}"`)
             // Linux network namespace
-            .replace("%NETNS%", `ns${id}`)
-            // XORG display
-            .replace("%DISPLAY%", process.env.DISPLAY),
+            .replace("%NETNS%", `ns${id}`),
             self.spawnSteamOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.logSteam.on('error', (err) => { self.log(`error on logSteam pipe: ${err}`) });
@@ -178,6 +176,15 @@ class Bot extends EventEmitter {
             return;
         }
 
+        var files = fs.readdirSync('/tmp/');
+        files.forEach((str, index, arr) => {
+        if (str.startsWith("source_engine") && str.endsWith(".lock"))
+            fs.unlink(`/tmp/${str}`, (err) => {
+                if (err)
+                    self.log("[ERROR] Failed to delete a source engine lock!");
+            });
+        });
+        
         var filename = `.gl${makeid(6)}`;
         fs.copyFileSync("/opt/cathook/bin/libcathook-textmode.so", `/tmp/${filename}`);
 
