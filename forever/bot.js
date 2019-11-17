@@ -108,6 +108,14 @@ class Bot extends EventEmitter {
             self.ipcID = id;
             if (!self.ipcState) {
                 self.log(`Assigned IPC ID ${id}`);
+                var files = fs.readdirSync('/tmp/');
+                files.forEach((str, index, arr) => {
+                    if (str.startsWith("source_engine") && str.endsWith(".lock"))
+                        fs.unlink(`/tmp/${str}`, (err) => {
+                            if (err)
+                                self.log("[ERROR] Failed to delete a source engine lock!");
+                        });
+                });
             }
             self.ipcState = data;
             self.state = STATE.RUNNING;
