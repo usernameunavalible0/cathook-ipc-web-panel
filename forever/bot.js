@@ -23,8 +23,6 @@ const TIMEOUT_RESTART = 10000;
 const steamStartQueue = new ExecQueue(5000);
 const gameStartQueue = new ExecQueue(5000);
 
-var currentlyStartingGames = 0;
-
 const STATE = {
     INITIALIZING: 0,
     INITIALIZED: 1,
@@ -138,14 +136,13 @@ class Bot extends EventEmitter {
                 return;
             self.spawnSteam();
             self.state = STATE.STARTING;
-            currentlyStartingGames++;
 
             self.processingStartTime = Date.now();
             self.processingWaitTime = self.processingStartTime;
             var loop = setInterval(function () {
                 // Start timestmap + Additional Time (Based on Queue size) 
                 if (self.processingStartTime == self.processingWaitTime)
-                    self.processingWaitTime = self.processingStartTime + TIMEOUT_START_GAME * currentlyStartingGames;
+                    self.processingWaitTime = self.processingStartTime + TIMEOUT_START_GAME * module.exports.currentlyStartingGames;
                 if (Date.now() >= self.processingWaitTime)
                 {
                     if (self.state == STATE.STARTING)
@@ -269,8 +266,6 @@ class Bot extends EventEmitter {
                     self.log(`IPC data timed out! Failed to inject?`);
                     self.restart();
                 }
-                else
-                    currentlyStartingGames--;
             }, TIMEOUT_IPC_STATE);
         }, 10000);
     }
@@ -284,8 +279,6 @@ class Bot extends EventEmitter {
     }
     handleGameExit(code, signal) {
         var self = this;
-        if (self.state == STATE.STARTING || self.state == STATE.WAITING)
-            currentlyStartingGames--;
         self.log(`Game (${self.procFirejailGame.pid}) exited with code ${code}, signal ${signal}`);
         self.emit('exit-game');
         self.ipcState = null;
@@ -297,8 +290,6 @@ class Bot extends EventEmitter {
     }
     stop() {
         var self = this;
-        if (self.state == STATE.STARTING || self.state == STATE.WAITING)
-            currentlyStartingGames--;
         self.stopped = true;
         self.log('Stopping...');
         clearTimeout(self.timeoutSteamRestart);
@@ -361,4 +352,6 @@ class Bot extends EventEmitter {
     }
 }
 
-module.exports = Bot;
+module.exports.bot = Bot;
+module.exports.currentlyStartingGames = 0;
+module.exports.states = STATE;

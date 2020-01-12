@@ -21,6 +21,10 @@ class BotManager {
     }
     update() {
         var self = this;
+        Bot.currentlyStartingGames = 0;
+        for (var b of self.bots)
+            if (b.status == Bot.states.STARTING || b.status == Bot.states.WAITING)
+                Bot.currentlyStartingGames++;
         self.cc.command('query', {}, function (data) {
             self.updateTimeout = setTimeout(self.update.bind(self), 1000);
             self.lastQuery = data;
@@ -56,7 +60,7 @@ class BotManager {
                 console.log('[ERROR] Could not allocate user for bot!');
                 return;
             }
-            this.bots.push(new Bot('b' + u.uid, u));
+            this.bots.push(new Bot.bot('b' + u.uid, u));
         }
         while (this.bots.length > quota) {
             var b = this.bots.pop();
