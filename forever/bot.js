@@ -238,7 +238,7 @@ class Bot extends EventEmitter {
         self.timeoutGameStart = setTimeout(function () {
             fs.unlinkSync(`/tmp/${filename}`);
             var res = procevt.find('hl2_linux', self.user.uid);
-            if (!res.length) {
+            if (!res.length || !self.procFirejailGame) {
                 self.log('[ERROR] Could not find running game!');
                 self.timeoutSteamRestart = setTimeout(self.restart.bind(self), TIMEOUT_RESTART);
                 return;
