@@ -95,8 +95,9 @@ class Bot extends EventEmitter {
         // Dynamically determine LD_LIBRARY_PATH with steam-runtime
         this.LD_LIBRARY_PATH = `${this.steamNativeRuntime ? "" : child_process.execSync("./run.sh printenv LD_LIBRARY_PATH", {
             cwd: `${this.steamPath}/ubuntu12_32/steam-runtime`
-        }).toString().replace(/(\r\n|\n|\r)/gm, "")}"${this.tf2Path}/bin"`
+        }).toString().replace(/(\r\n|\n|\r)/gm, "")}:"${this.tf2Path}/bin"`
 
+        self.log(`${this.LD_LIBRARY_PATH}`);
         // :/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu/mesa-egl:/usr/lib/i386-linux-gnu/mesa:/usr/local/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/mesa-egl:/usr/lib/x86_64-linux-gnu/mesa:/lib32:/usr/lib32:/libx32:/usr/libx32:/lib:/usr/lib:/usr/lib/i386-linux-gnu/sse2:/usr/lib/i386-linux-gnu/tls:/usr/lib/x86_64-linux-gnu/tls
         this.spawnSteamOptions = {
             shell: 'bash'
