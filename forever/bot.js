@@ -10,8 +10,10 @@ const accounts = require('./acc.js');
 const ExecQueue = require('./execqueue');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_STEAM = 'firejail --net="%INTERFACE%" --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% --env=PULSE_SERVER="unix:/tmp/pulse.sock" steam -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
-const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% bash -c \'cd $GAMEPATH && LD_LIBRARY_PATH=%LD_LIBRARY_PATH% LD_PRELOAD=%LD_PRELOAD% PULSE_SERVER="unix:/tmp/pulse.sock" DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -sw -h 640 -w 480 -novid -nojoy -noshaderapi -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\''
+const LAUNCH_OPTIONS_STEAM = 'firejail --net="%INTERFACE%" --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% %STEAM% -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
+const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% bash -c \'cd ~/$GAMEPATH && %REPLACE_RUNTIME% LD_PRELOAD=%LD_PRELOAD% DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -sw -h 640 -w 480 -novid -nojoy -noshaderapi -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\''
+const LAUNCH_OPTIONS_GAME_NATIVE = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./bin"');
+const LAUNCH_OPTIONS_GAME_RUNTIME = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$(~/"%STEAM_RUNTIME%" printenv LD_LIBRARY_PATH):./bin"');
 
 // Adjust these values as needed to optimize catbot performance
 // How long to wait for the TF2 process to be created by firejail
@@ -97,11 +99,7 @@ class Bot extends EventEmitter {
         this.logSteam = null;
         this.logGame = null;
 
-        this.isGarbageDistro = !fs.existsSync(`${USER.home}/.local/share/Steam/steam`);
-        this.steamPath = this.isGarbageDistro ? `${this.home}/.steam` : `${this.home}/.local/share/Steam`
-        this.mainSteamPath = this.isGarbageDistro ? `${USER.home}/.steam` : `${USER.home}/.local/share/Steam`
-        this.steamApps = this.isGarbageDistro ? `${this.steamPath}/steam/steamapps` : `${this.steamPath}/steamapps`;
-        this.tf2Path = this.isGarbageDistro ? `${this.mainSteamPath}/steam/steamapps/common/Team Fortress 2` : `${this.mainSteamPath}/steamapps/common/Team Fortress 2`
+        this.nativeSteam = fs.existsSync("/usr/bin/steam-native");
 
         this.spawnOptions = {
             shell: 'bash',
@@ -177,6 +175,7 @@ class Bot extends EventEmitter {
             fs.symlinkSync("/opt/steamapps/", self.steamApps);
             chownr.sync(self.steamPath, USER.uid, USER.uid);
         }*/
+        var steambin = this.nativeSteam ? "steam-native" : "steam";
 
         self.procFirejailSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM
             // Username
@@ -192,7 +191,8 @@ class Bot extends EventEmitter {
             // Network interface
             .replace("%INTERFACE%", USER.interface)
             // Home folder
-            .replace("%HOME%", self.home),
+            .replace("%HOME%", self.home)
+            .replace("%STEAM%", steambin),
             self.spawnOptions);
         self.logSteam = fs.createWriteStream('./logs/' + self.name + '.steam.log');
         self.logSteam.on('error', (err) => { self.log(`error on logSteam pipe: ${err}`) });
@@ -200,9 +200,16 @@ class Bot extends EventEmitter {
         self.procFirejailSteam.stderr.on("data", (data) => {
             var text = data.toString();
             if (text.includes("System startup time:")) {
+                // Dynamically determine the corrrect paths, this supports debian, etc
+                var steam_path = path.join(this.home, ".steam/steam");
+                var steam_apps = path.join(steam_path, "steamapps");
+                self.steamPath = path.resolve(this.home, path.relative(USER.home, fs.realpathSync(steam_path)));
+                self.steamApps = path.resolve(this.home, path.relative(USER.home, fs.realpathSync(steam_apps)));
+                self.tf2Path = path.join(this.steamApps, "common/Team Fortress 2");
+
                 self.isSteamWorking = true;
-                if (this.shouldSetupSteamapps()) {
-                    this.setupSteamapps();
+                if (self.shouldSetupSteamapps()) {
+                    self.setupSteamapps();
                 }
             }
         });
@@ -215,7 +222,7 @@ class Bot extends EventEmitter {
         });
         self.procFirejailSteam.stderr.pipe(self.logSteam);
         self.procFirejailSteam.on('exit', self.handleSteamExit.bind(self));
-        self.log(`Launched Steam (${self.procFirejailSteam.pid}) as ${self.account.steamID || self.account.steamid}`);
+        self.log(`Launched ${steambin} (${self.procFirejailSteam.pid}) as ${self.account.steamID || self.account.steamid}`);
         self.emit('start-steam', self.procFirejailSteam.pid);
     }
 
@@ -223,26 +230,19 @@ class Bot extends EventEmitter {
         var self = this;
         this.restarts++;
 
-        if (!self.LD_LIBRARY_PATH)
-            // Dynamically determine LD_LIBRARY_PATH with steam-runtime
-            self.LD_LIBRARY_PATH = `${child_process.execSync("./run.sh printenv LD_LIBRARY_PATH", {
-                cwd: `${this.steamPath}/ubuntu12_32/steam-runtime`
-            }).toString().replace(/(\r\n|\n|\r)/gm, "")}:"${this.tf2Path}/bin"`
-
         var filename = `/tmp/.gl${makeid(6)}`;
         fs.copyFileSync("/opt/cathook/bin/libcathook-textmode.so", filename);
 
         clearSourceLockFiles();
 
-        self.procFirejailGame = child_process.spawn(LAUNCH_OPTIONS_GAME.replace("$GAMEPATH", self.tf2Path.replace(/(\s+)/g, '\\$1'))
+        self.procFirejailGame = child_process.spawn((this.nativeSteam ? LAUNCH_OPTIONS_GAME_NATIVE : LAUNCH_OPTIONS_GAME_RUNTIME).replace("$GAMEPATH", path.relative(self.home, self.tf2Path).replace(/(\s+)/g, '\\$1'))
             // Firejail jail name used by this users steam
             .replace("%JAILNAME%", self.name)
             // Cathook
             .replace("%LD_PRELOAD%", `"${filename}:${process.env.STEAM_LD_PRELOAD}"`)
-            // tf2 bin dir, steam runtime
-            .replace("%LD_LIBRARY_PATH%", self.LD_LIBRARY_PATH)
             // XORG display
-            .replace("%DISPLAY%", process.env.DISPLAY),
+            .replace("%DISPLAY%", process.env.DISPLAY)
+            .replace("%STEAM_RUNTIME%", path.relative(self.home, path.join(self.steamPath, "/ubuntu12_32/steam-runtime/run.sh"))),
             [], self.spawnOptions);
         self.logGame = fs.createWriteStream('./logs/' + self.name + '.game.log');
         self.logGame.on('error', (err) => { self.log(`error on logGame pipe: ${err}`) });
