@@ -7,7 +7,6 @@ const procfs = require('procfs-stats');
 const path = require("path");
 
 const accounts = require('./acc.js');
-const ExecQueue = require('./execqueue');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = 'firejail --net="%INTERFACE%" --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% %STEAM% -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
@@ -22,10 +21,6 @@ const TIMEOUT_START_GAME = 10000;
 const TIMEOUT_IPC_STATE = 90000;
 // Time to wait for steam to be "ready"
 const TIMEOUT_STEAM_RUNNING = 60000;
-
-// Time to wait between starting each instance of Steam or TF2
-const steamStartQueue = new ExecQueue(5000);
-const gameStartQueue = new ExecQueue(5000);
 
 const STATE = {
     INITIALIZING: 0,
@@ -420,6 +415,10 @@ class Bot extends EventEmitter {
     }
     stop() {
         this.shouldRun = false;
+    }
+    full_stop() {
+        this.stop();
+        return !(this.procFirejailGame || this.procFirejailSteam)
     }
 }
 

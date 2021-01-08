@@ -10,13 +10,13 @@ class CathookConsole extends EventEmitter {
         var self = this;
         this.init = false;
         this.process = child_process.spawn(CONSOLE_PATH);
-        this.process.on('exit', function(code) {
+        this.process.on('exit', function (code) {
             self.init = false;
             self.emit('exit');
             console.log('[!] cathook console exited with code', code);
         });
         var buff = '';
-        this.process.stdout.on('data', function(data) {
+        this.process.stdout.on('data', function (data) {
             var z = data.toString();
             for (var i = 0; i < z.length; i++) {
                 if (z[i] == '\n') {
@@ -33,7 +33,7 @@ class CathookConsole extends EventEmitter {
                 }
             }
         });
-        this.on('data', function(data) {
+        this.on('data', function (data) {
             if (!data) return;
             if (data.init) {
                 self.init = true;
@@ -47,6 +47,9 @@ class CathookConsole extends EventEmitter {
         this.process.stdin.write(JSON.stringify(data) + '\n');
         if (callback)
             this.once('data', callback);
+    }
+    stop() {
+        this.command("exit", {});
     }
 }
 

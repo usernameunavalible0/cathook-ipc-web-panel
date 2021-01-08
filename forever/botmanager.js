@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { clone } = require('underscore');
 const Bot = require('./bot');
 
 class BotManager {
@@ -10,40 +11,54 @@ class BotManager {
         this.bots = [];
         this.cc = cc;
         this.quota = 0;
+        this.wanted_quota = 0;
         this.lastQuery = {};
         this.updateTimeout = setTimeout(this.update.bind(this), 1000);
+        this.stopping = false;
     }
     update() {
         var self = this;
         Bot.currentlyStartingGames = 0;
-        for (var b of self.bots) {
+
+        // Add new bots
+        this.enforceQuota();
+
+        for (var i = self.bots.length - 1; i >= 0; i--) {
+            var b = self.bots[i];
             if (b.status == Bot.states.STARTING || b.status == Bot.states.WAITING)
                 Bot.currentlyStartingGames++;
-            b.update();
+            if (i + 1 > this.quota && b.full_stop())
+            {
+                self.bots.splice(i, 1);
+            }
+            else
+                b.update();
         }
-        self.cc.command('query', {}, function (data) {
-            self.updateTimeout = setTimeout(self.update.bind(self), 1000);
-            self.lastQuery = data;
-            for (var q in data.result) {
-                for (var b of self.bots) {
-                    if (b.startTime && b.startTime == data.result[q].starttime) {
-                        b.emit('ipc-data', {
-                            id: q,
-                            data: data.result[q]
-                        })
+
+        if (!this.stopping)
+            self.cc.command('query', {}, function (data) {
+                self.updateTimeout = setTimeout(self.update.bind(self), 1000);
+                self.lastQuery = data;
+                for (var q in data.result) {
+                    for (var b of self.bots) {
+                        if (b.startTime && b.startTime == data.result[q].starttime) {
+                            b.emit('ipc-data', {
+                                id: q,
+                                data: data.result[q]
+                            })
+                        }
                     }
                 }
-            }
-        });
+            });
+        else if (self.bots.length)
+            self.updateTimeout = setTimeout(self.update.bind(self), 1000);
     }
     enforceQuota() {
-        var quota = this.quota;
-        while (this.bots.length < quota) {
+        console.log(this.bots.length, this.quota)
+        if (this.bots.length == this.quota)
+            this.quota = this.wanted_quota;
+        while (this.bots.length < this.quota) {
             this.bots.push(new Bot.bot("b" + this.bots.length));
-        }
-        while (this.bots.length > quota) {
-            var b = this.bots.pop();
-            b.stop();
         }
     }
     bot(name) {
@@ -57,12 +72,16 @@ class BotManager {
         if (!isFinite(quota) || isNaN(quota)) {
             return;
         }
-        this.quota = quota;
+        this.wanted_quota = quota;
         this.enforceQuota();
     }
     getJSONStatus() {
         var result = {};
         return result;
+    }
+    stop() {
+        this.setQuota(0);
+        this.stopping = true;
     }
 }
 

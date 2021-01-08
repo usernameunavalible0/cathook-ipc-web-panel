@@ -2,19 +2,18 @@ const CathookConsole = require('./cathook');
 const express = require('express');
 const bodyparser = require('body-parser');
 const path = require('path');
-const forever = require('./forever/app');
+const { Forever } = require('./forever/app');
 const fs = require('fs');
+const stoppable = require("stoppable");
 
 const PORT = 8081;
 
 const npid = require('npid');
-try
-{
+try {
     const pid = npid.create('/tmp/ncat-cathook-webpanel.pid', true);
     pid.removeOnExit();
 }
-catch (error)
-{
+catch (error) {
     console.log(`Webpanel already running?`);
     process.exit(1);
 }
@@ -40,19 +39,27 @@ fs.writeFileSync('/tmp/cat-webpanel-password', basicAuth.password);
 
 const cc = new CathookConsole();
 
-(require('./forever/app'))(app, cc);
+var forever = new Forever(app, cc);
 
 cc.once('init', () => {
     cc.command('connect');
 });
-cc.on('exit', () => {});
+cc.on('exit', () => { });
 
-app.post('/api/direct/:command', function(req, res) {
-    cc.command(req.params.command, req.body, function(data) {
+app.post('/api/direct/:command', function (req, res) {
+    cc.command(req.params.command, req.body, function (data) {
         res.send(data);
     });
 });
 
-app.listen(PORT, function() {
-	console.log("Listening on port", PORT);
+var server = app.listen(PORT, function () {
+    console.log("Listening on port", PORT);
+});
+// For some reason nodejs thinks keep-alive connections should keep the http server alive. What the fuck.
+stoppable(server, 0);
+
+process.on("SIGINT", function () {
+    server.stop();
+    forever.stop();
+    cc.stop();
 });
