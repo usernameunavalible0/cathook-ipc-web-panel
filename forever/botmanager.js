@@ -58,7 +58,7 @@ class BotManager {
         if (this.bots.length == this.quota)
             this.quota = this.wanted_quota;
         while (this.bots.length < this.quota) {
-            this.bots.push(new Bot.bot("b" + this.bots.length));
+            this.bots.push(new Bot.bot(this.bots.length));
         }
     }
     bot(name) {

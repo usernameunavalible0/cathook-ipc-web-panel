@@ -9,7 +9,7 @@ const path = require("path");
 const accounts = require('./acc.js');
 const config = require('./config');
 
-const LAUNCH_OPTIONS_STEAM = 'firejail --net="%INTERFACE%" --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% %STEAM% -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
+const LAUNCH_OPTIONS_STEAM = 'firejail %NETWORK% --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% %STEAM% -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
 const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% bash -c \'cd ~/$GAMEPATH && %REPLACE_RUNTIME% LD_PRELOAD=%LD_PRELOAD% DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -sw -h 640 -w 480 -novid -nojoy -noshaderapi -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\''
 const LAUNCH_OPTIONS_GAME_NATIVE = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./bin"');
 const LAUNCH_OPTIONS_GAME_RUNTIME = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$(~/"%STEAM_RUNTIME%" printenv LD_LIBRARY_PATH):./bin"');
@@ -60,18 +60,28 @@ if (!process.env.SUDO_USER) {
     process.exit(1);
 }
 
-const USER = { name: process.env.SUDO_USER, uid: Number.parseInt(child_process.execSync("id -u " + process.env.SUDO_USER).toString().trim()), home: child_process.execSync(`printf ~${process.env.SUDO_USER}`).toString(), interface: child_process.execSync("route -n | grep '^0\.0\.0\.0' | grep -o '[^ ]*$' | head -n 1").toString().trim() };
+const USER = { name: process.env.SUDO_USER, uid: Number.parseInt(child_process.execSync("id -u " + process.env.SUDO_USER).toString().trim()), home: child_process.execSync(`printf ~${process.env.SUDO_USER}`).toString(), interface: child_process.execSync("route -n | grep '^0\.0\.0\.0' | grep -o '[^ ]*$' | head -n 1").toString().trim(), SUPPORTS_FJ_NET: true };
+try {
+    child_process.execSync(`firejail --quiet --noprofile --net=${USER.interface} bash -c "ping -q -c 1 -W 1 1.1.1.1 >/dev/null && echo ok"`)
+} catch (error) {
+    USER.SUPPORTS_FJ_NET = false;
+}
 
 console.log('Main user name: ' + USER.name);
 
 class Bot extends EventEmitter {
-    constructor(name) {
+    constructor(botid) {
         super();
         var self = this;
         this.state = STATE.INITIALIZING;
 
-        this.name = name;
+        this.name = "b" + botid;
+        this.botid = botid;
         this.home = path.join(__dirname, "..", "..", "user_instances", this.name)
+
+        // Create a network namespace for this bot
+        if (!USER.SUPPORTS_FJ_NET)
+            child_process.execSync("./scripts/ns-inet " + this.botid)
 
         this.stopped = false;
         this.account = null;
@@ -183,8 +193,8 @@ class Bot extends EventEmitter {
             .replace("%LD_PRELOAD%", `"${process.env.STEAM_LD_PRELOAD}"`)
             // XOrg Display
             .replace("%DISPLAY%", process.env.DISPLAY)
-            // Network interface
-            .replace("%INTERFACE%", USER.interface)
+            // Network
+            .replace("%NETWORK%", USER.SUPPORTS_FJ_NET ? `--net=${USER.interface}` : `--dns=1.1.1.1 --netns=catbotns${this.botid}`)
             // Home folder
             .replace("%HOME%", self.home)
             .replace("%STEAM%", steambin),
@@ -418,6 +428,9 @@ class Bot extends EventEmitter {
     }
     full_stop() {
         this.stop();
+        // Delete the network namespace for this bot
+        if (!USER.SUPPORTS_FJ_NET && fs.existsSync(`/var/run/netns/catbotns${this.botid}`))
+            child_process.execSync(`./scripts/ns-delete ${this.botid}`)
         return !(this.procFirejailGame || this.procFirejailSteam)
     }
 }
