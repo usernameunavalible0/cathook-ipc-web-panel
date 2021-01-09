@@ -110,6 +110,7 @@ class Bot extends EventEmitter {
             shell: 'bash',
             uid: USER.uid,
             env: {
+                PATH: process.env.PATH,
                 HOME: USER.home
             }
         }
