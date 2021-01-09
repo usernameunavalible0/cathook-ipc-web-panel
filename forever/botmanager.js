@@ -54,7 +54,6 @@ class BotManager {
             self.updateTimeout = setTimeout(self.update.bind(self), 1000);
     }
     enforceQuota() {
-        console.log(this.bots.length, this.quota)
         if (this.bots.length == this.quota)
             this.quota = this.wanted_quota;
         while (this.bots.length < this.quota) {
