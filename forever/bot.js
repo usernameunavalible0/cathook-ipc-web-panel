@@ -11,6 +11,7 @@ const accounts = require('./acc.js');
 const config = require('./config');
 
 const LAUNCH_OPTIONS_STEAM = 'firejail %NETWORK% --noprofile --private="%HOME%" --name=%JAILNAME% --env=DISPLAY=%DISPLAY% --env=LD_PRELOAD=%LD_PRELOAD% %STEAM% -silent -login %LOGIN% %PASSWORD% -nominidumps -nobreakpad -no-browser -nofriendsui'
+const LAUNCH_OPTIONS_STEAM_RESET = 'firejail --net=none --noprofile --private="%HOME%" %STEAM% --reset'
 const LAUNCH_OPTIONS_GAME = 'firejail --join=%JAILNAME% bash -c \'cd ~/$GAMEPATH && %REPLACE_RUNTIME% LD_PRELOAD=%LD_PRELOAD% DISPLAY=%DISPLAY% ./hl2_linux -game tf -silent -sw -h 640 -w 480 -novid -nojoy -noshaderapi -nomouse -nomessagebox -nominidumps -nohltv -nobreakpad -particles 512 -snoforceformat -softparticlesdefaultoff -threads 1\''
 const LAUNCH_OPTIONS_GAME_NATIVE = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./bin"');
 const LAUNCH_OPTIONS_GAME_RUNTIME = LAUNCH_OPTIONS_GAME.replace("%REPLACE_RUNTIME%", 'LD_LIBRARY_PATH="$(~/"%STEAM_RUNTIME%" printenv LD_LIBRARY_PATH):./bin"');
@@ -21,7 +22,7 @@ const TIMEOUT_START_GAME = 10000;
 // Timeout for cathook to connect to the IPC server once injected
 const TIMEOUT_IPC_STATE = 90000;
 // Time to wait for steam to be "ready"
-const TIMEOUT_STEAM_RUNNING = 60000;
+const TIMEOUT_STEAM_RUNNING = 90000;
 
 const STATE = {
     INITIALIZING: 0,
@@ -144,6 +145,7 @@ class Bot extends EventEmitter {
         this.time_gameCheck = 0;
         this.time_ipcState = 0;
         this.gettingAccount = false;
+        this.shouldResetSteam = false;
     }
 
     log(message) {
@@ -184,7 +186,7 @@ class Bot extends EventEmitter {
         }*/
         var steambin = this.nativeSteam ? "steam-native" : "steam";
 
-        self.procFirejailSteam = child_process.spawn(LAUNCH_OPTIONS_STEAM
+        self.procFirejailSteam = child_process.spawn(([this.shouldResetSteam, this.shouldResetSteam = 0][0] ? LAUNCH_OPTIONS_STEAM_RESET : LAUNCH_OPTIONS_STEAM)
             // Username
             .replace("%LOGIN%", self.account.login)
             // Password
@@ -224,6 +226,10 @@ class Bot extends EventEmitter {
                     tail_steam_err_log.unwatch();
                 }
             }
+            if (RegExp("Failed to load .*\.so: cannot open shared object file: .*").test(text)) {
+                this.shouldRestart = true;
+                this.shouldResetSteam = true;
+            }
         }
 
         function registerDebianListener() {
@@ -257,6 +263,11 @@ class Bot extends EventEmitter {
             // Extend time if we are downloading updates.
             if (text.includes(" Downloading update (")) {
                 self.time_steamWorking = Date.now() + TIMEOUT_STEAM_RUNNING;
+            }
+            if (text.includes("Error: You are missing the following 32-bit libraries, and Steam may not run:")
+                || text.includes("Error: Couldn't set up the Steam Runtime. Are you running low on disk space?")) {
+                this.shouldRestart = true;
+                this.shouldResetSteam = true;
             }
             if (isDebian && text.includes("Running Steam on"))
                 registerDebianListener.bind(this)();

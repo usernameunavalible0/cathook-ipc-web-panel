@@ -1,5 +1,5 @@
 const config = {
-    nodiscard: false
+    nodiscard: true
 }
 
 module.exports = config;
