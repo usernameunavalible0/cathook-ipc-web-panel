@@ -25,7 +25,7 @@ class BotManager {
 
         for (var i = self.bots.length - 1; i >= 0; i--) {
             var b = self.bots[i];
-            if (b.status == Bot.states.STARTING || b.status == Bot.states.WAITING)
+            if (b.state == Bot.states.STARTING || b.state == Bot.states.WAITING)
                 Bot.currentlyStartingGames++;
             if (i + 1 > this.quota && b.full_stop())
             {

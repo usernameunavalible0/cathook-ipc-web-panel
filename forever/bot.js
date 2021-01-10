@@ -23,6 +23,8 @@ const TIMEOUT_START_GAME = 10000;
 const TIMEOUT_IPC_STATE = 90000;
 // Time to wait for steam to be "ready"
 const TIMEOUT_STEAM_RUNNING = 90000;
+// Maximum amount of concurrently starting bots
+const MAX_CONURRENT_BOTS = 3;
 
 const STATE = {
     INITIALIZING: 0,
@@ -443,7 +445,8 @@ class Bot extends EventEmitter {
                             self.gettingAccount = false;
                         });
                     }
-                    else if (this.account) {
+                    else if (this.account && module.exports.currentlyStartingGames < MAX_CONURRENT_BOTS) {
+                        module.exports.currentlyStartingGames++;
                         this.state = STATE.STARTING;
                         this.reset();
                         this.spawnSteam();
