@@ -1,14 +1,7 @@
 const BotManager = require('./botmanager');
 const config = require('./config');
-const fs = require('fs');
 
 var manager = null;
-
-// epic sauce lock remover
-fs.watch('/tmp', (eventType, filename) => {
-    if (filename === "source_engine_2925226592.lock" && fs.existsSync(`/tmp/${filename}`))
-        fs.unlinkSync(`/tmp/${filename}`);
-})
 
 class app {
 	constructor(app, cc) {

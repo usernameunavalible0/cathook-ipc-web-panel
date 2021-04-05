@@ -58,8 +58,16 @@ var server = app.listen(PORT, function () {
 // For some reason nodejs thinks keep-alive connections should keep the http server alive. What the fuck.
 stoppable(server, 0);
 
+
+// epic sauce lock remover
+const sauce_watcher = fs.watch('/tmp', (eventType, filename) => {
+    if (filename === "source_engine_2925226592.lock" && fs.existsSync(`/tmp/${filename}`))
+        fs.unlinkSync(`/tmp/${filename}`);
+})
+
 process.on("SIGINT", function () {
     server.stop();
     forever.stop();
     cc.stop();
+    sauce_watcher.close();
 });
