@@ -62,7 +62,16 @@ stoppable(server, 0);
 // epic sauce lock remover
 const sauce_watcher = fs.watch('/tmp', (eventType, filename) => {
     if (filename === "source_engine_2925226592.lock" && fs.existsSync(`/tmp/${filename}`))
-        fs.unlinkSync(`/tmp/${filename}`);
+    {
+        try
+        {
+            fs.unlinkSync(`/tmp/${filename}`);
+        }
+        catch (err)
+        {
+
+        }
+    }
 })
 
 process.on("SIGINT", function () {
