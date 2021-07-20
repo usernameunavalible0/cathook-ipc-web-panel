@@ -207,7 +207,7 @@ class Bot extends EventEmitter {
         self.logSteam.on('error', (err) => { self.log(`error on logSteam pipe: ${err}`) });
         self.procFirejailSteam.stdout.pipe(self.logSteam);
 
-        var tail_steam_err_log = null;
+        var tail_steam_err_logs = [];
         var steam_path = path.join(this.home, ".steam/steam");
 
         function processErrorLogs(text) {
@@ -222,9 +222,13 @@ class Bot extends EventEmitter {
                 if (self.shouldSetupSteamapps()) {
                     self.setupSteamapps();
                 }
-                if (tail_steam_err_log) {
-                    tail_steam_err_log.unwatch();
+
+                for (var i = 0; i < tail_steam_err_logs.length; i++) {
+                    if (tail_steam_err_logs[i]) {
+                        tail_steam_err_logs[i].unwatch();
+                    }
                 }
+                tail_steam_err_logs = [];
             }
             if (RegExp("Failed to load .*\.so: cannot open shared object file: .*").test(text)) {
                 this.shouldRestart = true;
@@ -234,13 +238,13 @@ class Bot extends EventEmitter {
 
         function registerDebianListener() {
             try {
-                tail_steam_err_log = new Tail(path.join(this.home, ".steam/debian-installation/error.log"));
-                tail_steam_err_log.on('line', (data) => {
+                tail_steam_err_logs.push(new Tail(path.join(this.home, ".steam/debian-installation/error.log")));
+                tail_steam_err_logs[tail_steam_err_logs.length-1].on('line', (data) => {
                     processErrorLogs.bind(this)(data);
                 })
             } catch (error) {
-                self.log("No debian-installation/error.log file found. This start can not succeed!");
-                tail_steam_err_log = null;
+                self.log("No debian-installation/error.log file found.");
+                tail_steam_err_logs.pop();
             }
         }
 
@@ -252,12 +256,12 @@ class Bot extends EventEmitter {
         // WHY THE FUCK DO YOU INSIST ON FORWARDING THE STEAM ERROR LOGS (THE ONLY USEFUL LOGS) TO A RANDOM ASS FILE FOR NO REASON?
         var isDebian = !fs.existsSync("/usr/bin/steam") && fs.existsSync("/usr/games/steam");
 
-        if (!isDebian) {
-            self.procFirejailSteam.stderr.on("data", (data) => {
-                var text = data.toString();
-                processErrorLogs.bind(this)(text);
-            });
-        }
+
+        self.procFirejailSteam.stderr.on("data", (data) => {
+            var text = data.toString();
+            processErrorLogs.bind(this)(text);
+        });
+
         self.procFirejailSteam.stdout.on("data", (data) => {
             var text = data.toString();
             // Extend time if we are downloading updates.
@@ -274,12 +278,15 @@ class Bot extends EventEmitter {
         });
         self.procFirejailSteam.stderr.pipe(self.logSteam);
         self.procFirejailSteam.on('exit', self.handleSteamExit.bind(self));
-        if (tail_steam_err_log)
+        if (tail_steam_err_logs.length)
             self.procFirejailSteam.on('exit', () => {
-                if (tail_steam_err_log) {
-                    tail_steam_err_log.unwatch();
-                    tail_steam_err_log = null;
+                for (var i = 0; i < tail_steam_err_logs.length; i++) {
+                    if (tail_steam_err_logs[i]) {
+                        tail_steam_err_logs[i].unwatch();
+                        tail_steam_err_logs[i] = null;
+                    }
                 }
+                tail_steam_err_logs = [];
             });
         self.log(`Launched ${steambin} (${self.procFirejailSteam.pid})`);
         self.emit('start-steam', self.procFirejailSteam.pid);
